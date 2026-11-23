@@ -1,0 +1,119 @@
+# Slack_AIbot 설정 파일
+
+workspace_root: "D:\\99_MyPJT\\GoogleAI_PJT"
+default_project: "slack_aibot"
+
+ai:
+  default_model: "gemini-4-neon-high"
+  default_mode: "dev"
+  available_models:
+    - "gemini-4-neon-high"
+    - "gemini-4-neon-xhigh"
+    - "gemini-4-neon-medium"
+    - "gemini-3.8-flash-high"
+    - "gemini-3.8-flash-medium"
+    - "claude-sonnet-5-5-high"
+    - "claude-opus-5-5-high"
+  timeout_sec: 1800
+  # Slack 보고에 맞춰 한국어로 핵심 변경 파일과 검증 결과를 간결하게 요약하도록 안내하는 선택적 지침
+  system_prefix: |
+    [Slack 원격 개발 지시 안내]
+    모든 답변과 진행 보고는 한국어로 작성하세요.
+    작업을 마친 후에는 변경한 파일 목록, 핵심 수정 내용, 실행한 검증/테스트 결과를 간결하게 요약해 주세요.
+
+reporting:
+  update_interval_sec: 2.5
+  max_message_chars: 3500
+  upload_long_logs: true
+
+projects:
+  slack_aibot:
+    path: "Slack_AIbot"
+    description: "Slack_AIbot — Slack 기반 AI 개발·제어 컨트롤러 (본 프로젝트)"
+  ondotrip:
+    path: "Google_OndoTrip"
+    description: "공공데이터 기반 구글 블로그 자동 포스팅"
+  mealandbrew:
+    path: "NaverMap_MealAndBrew"
+    description: "티스토리 맛집/카페 자동 포스팅"
+  camping:
+    path: "NaverMap_Camping"
+    description: "티스토리 캠핑 자동 포스팅"
+  traillog:
+    path: "Instagram_TrailLog"
+    description: "두루누비 인스타그램 카드뉴스"
+  daylog:
+    path: "Daylog"
+    description: "Daylog Android 앱"
+  videodownloader:
+    path: "VideoDownloader"
+    description: "VideoDownloader Android 앱"
+  videoplayer:
+    path: "VideoPlayer"
+    description: "VideoPlayer Android 앱"
+  tempday:
+    path: "Tstory_TempDay"
+    description: "Tstory_TempDay 프로젝트"
+
+tasks:
+  ondotrip:
+    project: "ondotrip"
+    command:
+      - ".venv\\Scripts\\python.exe"
+      - "main.py"
+      - "--mode"
+      - "auto"
+      - "--count"
+      - "5"
+    description: "OndoTrip 일일 자동 포스팅 5건 (임시저장)"
+  ondotrip-status:
+    project: "ondotrip"
+    command:
+      - ".venv\\Scripts\\python.exe"
+      - "main.py"
+      - "--status"
+    description: "OndoTrip 누적 현황 조회"
+  mealandbrew:
+    project: "mealandbrew"
+    command:
+      - ".venv\\Scripts\\python.exe"
+      - "-m"
+      - "src.run_daily_pipeline"
+      - "--count"
+      - "5"
+      - "--mode"
+      - "draft"
+    description: "NaverMap_MealAndBrew 일일 초안 5건 생성"
+  camping:
+    project: "camping"
+    command:
+      - ".venv\\Scripts\\python.exe"
+      - "-m"
+      - "src.run_daily_pipeline"
+      - "--count"
+      - "5"
+      - "--mode"
+      - "draft"
+    description: "NaverMap_Camping 일일 초안 5건 생성"
+  traillog-check:
+    project: "traillog"
+    command:
+      - ".venv\\Scripts\\python.exe"
+      - "instagram_publisher.py"
+      - "--check"
+    description: "TrailLog 인스타그램 연동 및 일일 한도 점검"
+  traillog:
+    project: "traillog"
+    command:
+      - ".venv\\Scripts\\python.exe"
+      - "main.py"
+      - "--brd"
+      - "걷기"
+      - "--skip-published"
+      - "--round-robin"
+      - "--max-daily"
+      - "5"
+      - "--count"
+      - "1"
+      - "--publish"
+    description: "TrailLog 미게시 코스 1건 생성 및 발행"

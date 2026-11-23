@@ -1,0 +1,17 @@
+# 환경변수 및 비밀 정보
+.env
+
+# Python 가상환경 및 캐시
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# 런타임 데이터 및 실행 로그
+data/
+logs/
+*.db
+*.db-shm
+*.db-wal
+*.log
