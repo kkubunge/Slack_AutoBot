@@ -224,3 +224,25 @@ def test_trigger_remote_workflow_and_execute_cloud_payload(tmp_path: Path) -> No
     assert slack_calls[-1][1]["ts"] == "100.2"
     assert "클라우드 AI 작업 완료" in slack_calls[-1][1]["text"]
     assert "*분석 결과*" in slack_calls[-1][1]["text"]
+
+
+def test_cloud_runner_imports_without_dotenv() -> None:
+    """클라우드 환경(PyYAML만 설치, dotenv 미설치)에서도 cloud.runner.main import가 성공하는지 검증한다."""
+    import subprocess
+    import sys
+
+    root = Path(__file__).resolve().parent.parent
+    code = (
+        "import sys; sys.modules['dotenv'] = None; "
+        "import src.formatter, cloud.runner.main; "
+        "print('OK')"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "OK" in proc.stdout

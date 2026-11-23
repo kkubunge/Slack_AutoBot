@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from typing import TYPE_CHECKING, Iterable
 
-from src.agy_runner import AgyResult
-from src.task_runner import TaskResult
+if TYPE_CHECKING:
+    from src.agy_runner import AgyResult
+    from src.task_runner import TaskResult
 
 _BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 _HEADING_RE = re.compile(r"^#{1,6}\s+(.+)$", re.MULTILINE)
