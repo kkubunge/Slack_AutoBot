@@ -179,17 +179,22 @@ def execute_cloud_payload(
             return 1
 
         wf = cloud_cfg.workflows[workflow_key]
+        run_inputs = dict(wf.inputs)
+        if channel_id and "slack_channel_id" not in run_inputs:
+            run_inputs["slack_channel_id"] = channel_id
+
         res = trigger_remote_workflow(
             repo_full_name=wf.repo,
             workflow_file=wf.workflow,
             ref=wf.ref,
-            inputs=wf.inputs,
+            inputs=run_inputs,
             token=gh_token,
         )
         if res.get("ok"):
             _report(
                 f":rocket: *원격 워크플로우 실행을 시작했습니다* (`{job_id}`)\n"
                 f"• 프리셋: `{wf.key}` (`{wf.repo}` / `{wf.workflow}`)\n"
+                f"• 실행이 끝나면 발행 결과와 링크가 이 채널로 자동 보고됩니다.\n"
                 f"• <{res['actions_url']}|대상 저장소 Actions 진행 상황 보기>"
             )
             return 0

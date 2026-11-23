@@ -125,9 +125,9 @@ function buildCloudScheduleText(env, args = "") {
   lines.push(
     ":alarm_clock: *클라우드 정기 자동 실행 예약 현황*",
     `• *Google_OndoTrip (\`ondotrip\`)*: Cloudflare Workers Cron (\`0 1 * * *\`, *매일 오전 10:00 KST*)`,
-    `  - 동작: \`${ondoRepo}\` 자동 포스팅 ${ondoCount}건 임시저장 및 Slack 보고`,
+    `  - 동작: \`${ondoRepo}\` 자동 공개 발행 ${ondoCount}건 및 Slack 보고`,
     "• *Instagram_TrailLog (`traillog`)*: GitHub Actions Cron (*매일 09:00 · 11:00 · 13:00 · 15:00 · 17:00 KST*)",
-    "  - 동작: `kkubunge/Instagram_TrailLog` 미게시 코스 카드뉴스 자동 발행 (일일 상한 5건)",
+    "  - 동작: `kkubunge/Instagram_TrailLog` 미게시 코스 카드뉴스 자동 게시 및 Slack 보고 (일일 상한 5건)",
     "",
     "_수동 즉시 실행: `!실행 ondotrip` · `!실행 ondotrip-status` · `!실행 traillog-dryrun` · `!실행 traillog`_",
   );
@@ -535,7 +535,7 @@ export function createHandler(deps = {}) {
           ref,
           inputs: {
             count,
-            publish: "false",
+            publish: "true",
             preview_only: "false",
             status_only: "false",
             slack_channel_id: reportChannel,
@@ -544,7 +544,7 @@ export function createHandler(deps = {}) {
 
         if (reportChannel && env.SLACK_BOT_TOKEN) {
           const text = res.ok
-            ? `:alarm_clock: *OndoTrip 일일 자동 실행 시작* (Cloudflare Cron \`${controller?.cron || "0 1 * * *"}\`)\n• 대상: \`${repoFullName}\` (${count}건 임시저장)\n• <${res.actionsUrl}|GitHub Actions 진행 상황 보기>`
+            ? `:alarm_clock: *OndoTrip 일일 자동 실행 시작* (Cloudflare Cron \`${controller?.cron || "0 1 * * *"}\`)\n• 대상: \`${repoFullName}\` (${count}건 자동 공개 발행)\n• <${res.actionsUrl}|GitHub Actions 진행 상황 보기>`
             : `:x: *OndoTrip 일일 자동 실행 트리거 실패*\n• 대상: \`${repoFullName}\`\n\`\`\`\n${res.error}\n\`\`\``;
           await callSlackApi(fetchFn, env.SLACK_BOT_TOKEN, "chat.postMessage", {
             channel: reportChannel,

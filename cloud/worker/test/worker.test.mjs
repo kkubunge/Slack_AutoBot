@@ -258,10 +258,12 @@ test("Worker scheduled 핸들러: Cron 트리거 시 Google_OndoTrip 워크플�
   assert.match(calls[0].url, /kkubunge\/Google_OndoTrip\/actions\/workflows\/daily_post\.yml\/dispatches$/);
   assert.equal(calls[0].body.ref, "main");
   assert.equal(calls[0].body.inputs.count, "5");
+  assert.equal(calls[0].body.inputs.publish, "true");
   assert.equal(calls[0].body.inputs.slack_channel_id, "D_OWNER");
   assert.match(calls[1].url, /chat\.postMessage$/);
   assert.equal(calls[1].body.channel, "D_OWNER");
   assert.match(calls[1].body.text, /OndoTrip 일일 자동 실행 시작/);
+  assert.match(calls[1].body.text, /자동 공개 발행/);
 });
 
 test("Worker !예약, !상태, !작업 명령 응답 검증", async () => {
@@ -331,6 +333,8 @@ test("Worker !예약, !상태, !작업 명령 응답 검증", async () => {
   assert.match(schedJson.text, /오전 10:00 KST/);
   assert.match(schedJson.text, /Google_OndoTrip/);
   assert.match(schedJson.text, /Instagram_TrailLog/);
+  assert.match(schedJson.text, /자동 공개 발행/);
+  assert.match(schedJson.text, /Slack 보고/);
 
   // 2. /slack/events !상태 & !작업 -> GitHub runs 조회 후 Slack 전송
   for (const cmdText of ["!상태", "!작업"]) {

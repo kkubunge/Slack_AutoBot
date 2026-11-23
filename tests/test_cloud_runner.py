@@ -20,7 +20,16 @@ def test_load_cloud_config_and_yaml_syntax() -> None:
     cfg = load_cloud_config(root / "cloud" / "cloud_repos.yaml")
     assert cfg.default_repo == "slack_aibot"
     assert set(cfg.repos.keys()) == {"slack_aibot", "traillog", "ondotrip"}
-    assert set(cfg.workflows.keys()) == {"traillog", "traillog-dryrun", "ondotrip", "ondotrip-preview", "ondotrip-status"}
+    assert set(cfg.workflows.keys()) == {
+        "traillog",
+        "traillog-dryrun",
+        "ondotrip",
+        "ondotrip-draft",
+        "ondotrip-preview",
+        "ondotrip-status",
+    }
+    assert cfg.workflows["ondotrip"].inputs["publish"] is True
+    assert cfg.workflows["ondotrip-draft"].inputs["publish"] is False
 
     # 클라우드 매니페스트 및 Actions 워크플로우 YAML 구문 검증
     manifest = yaml.safe_load((root / "cloud" / "slack_cloud_manifest.yaml").read_text(encoding="utf-8"))
@@ -31,7 +40,17 @@ def test_load_cloud_config_and_yaml_syntax() -> None:
     ondotrip_wf_path = root.parent / "Google_OndoTrip" / ".github" / "workflows" / "daily_post.yml"
     if ondotrip_wf_path.is_file():
         ondotrip_wf = yaml.safe_load(ondotrip_wf_path.read_text(encoding="utf-8"))
-        assert "workflow_dispatch" in ondotrip_wf[True if True in ondotrip_wf else "on"]
+        ondotrip_on = ondotrip_wf[True if True in ondotrip_wf else "on"]
+        assert "workflow_dispatch" in ondotrip_on
+        assert ondotrip_on["workflow_dispatch"]["inputs"]["publish"]["default"] is True
+        assert "slack_channel_id" in ondotrip_on["workflow_dispatch"]["inputs"]
+
+    traillog_wf_path = root.parent / "Instagram_TrailLog" / ".github" / "workflows" / "auto_publish.yml"
+    if traillog_wf_path.is_file():
+        traillog_wf = yaml.safe_load(traillog_wf_path.read_text(encoding="utf-8"))
+        traillog_on = traillog_wf[True if True in traillog_wf else "on"]
+        assert "workflow_dispatch" in traillog_on
+        assert "slack_channel_id" in traillog_on["workflow_dispatch"]["inputs"]
 
 
 def test_repo_toolchain_sandbox_and_modes(tmp_path: Path) -> None:
@@ -251,3 +270,54 @@ def test_cloud_runner_imports_without_dotenv() -> None:
     )
     assert proc.returncode == 0, proc.stderr
     assert "OK" in proc.stdout
+
+
+def test_execute_cloud_payload_run_injects_slack_channel_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """원격 워크플로우 실행(`!실행`) 시 현재 Slack 채널 ID가 inputs.slack_channel_id로 자동 전달되는지 검증한다."""
+    root = Path(__file__).resolve().parent.parent
+    cfg = load_cloud_config(root / "cloud" / "cloud_repos.yaml")
+
+    captured: list[dict] = []
+
+    def fake_trigger(*, repo_full_name, workflow_file, ref="main", inputs=None, token=""):
+        captured.append(
+            {
+                "repo_full_name": repo_full_name,
+                "workflow_file": workflow_file,
+                "ref": ref,
+                "inputs": dict(inputs or {}),
+                "token": token,
+            }
+        )
+        return {
+            "ok": True,
+            "actions_url": f"https://github.com/{repo_full_name}/actions/workflows/{workflow_file}",
+        }
+
+    monkeypatch.setattr("cloud.runner.main.trigger_remote_workflow", fake_trigger)
+
+    slack_calls: list[tuple[str, dict]] = []
+
+    def fake_slack(url: str, headers: dict[str, str], body: dict):
+        slack_calls.append((url, body))
+        return {"ok": True, "ts": "123.45"}
+
+    reporter = SlackWebReporter(bot_token="xoxb-test", transport=fake_slack)
+
+    rc = execute_cloud_payload(
+        payload={
+            "job_id": "run1",
+            "action": "run",
+            "workflow": "traillog",
+            "slack": {"channel_id": "D0CL64CQGJY", "status_ts": "100.5"},
+        },
+        cloud_cfg=cfg,
+        reporter=reporter,
+        gh_token="ghp-test",
+    )
+
+    assert rc == 0
+    assert len(captured) == 1
+    assert captured[0]["repo_full_name"] == "kkubunge/Instagram_TrailLog"
+    assert captured[0]["inputs"]["slack_channel_id"] == "D0CL64CQGJY"
+    assert "자동 보고" in slack_calls[-1][1]["text"]
