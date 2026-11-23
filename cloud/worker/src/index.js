@@ -98,6 +98,22 @@ async function triggerWorkflowDispatch(
   return { ok: false, error: `Workflow Dispatch 오류 (${resp.status}): ${errText.slice(0, 300)}` };
 }
 
+function formatKstDate(dateOrIso) {
+  let ms;
+  if (typeof dateOrIso === "number") {
+    ms = dateOrIso;
+  } else {
+    const normalized = String(dateOrIso || "").replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+    ms = Date.parse(normalized);
+  }
+  if (!Number.isFinite(ms)) return "";
+  const kst = new Date(ms + 9 * 3600 * 1000);
+  const yyyy = kst.getUTCFullYear();
+  const mm = String(kst.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(kst.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function formatKstTime(isoStr) {
   if (!isoStr) return "-";
   const ms = Date.parse(isoStr);
@@ -114,24 +130,146 @@ function formatKstTime(isoStr) {
 function buildCloudScheduleText(env, args = "") {
   const ondoRepo = env.ONDOTRIP_REPO || "kkubunge/Google_OndoTrip";
   const ondoCount = String(env.ONDOTRIP_DAILY_COUNT || "5");
+  const trailRepo = env.TRAILLOG_REPO || "kkubunge/Instagram_TrailLog";
+  const trailTarget = String(env.TRAILLOG_DAILY_TARGET || "5");
   const lines = [];
 
   if (args) {
     lines.push(
-      ":information_source: *클라우드 무인 모드*의 정기 스케줄은 `wrangler.toml` (`[triggers]`)과 워크플로우 YAML로 관리됩니다. (`!예약 추가/삭제`는 로컬 PC 모드 전용)\n",
+      ":information_source: *클라우드 무인 모드*의 정기 스케줄은 `wrangler.toml` (`[triggers]`)로 통합 관리됩니다. (`!예약 추가/삭제`는 로컬 PC 모드 전용)\n",
     );
   }
 
   lines.push(
     ":alarm_clock: *클라우드 정기 자동 실행 예약 현황*",
-    `• *Google_OndoTrip (\`ondotrip\`)*: Cloudflare Workers Cron (\`0 1 * * *\`, *매일 오전 10:00 KST*)`,
+    `• *Google_OndoTrip (\`온도트립\`, \`ondotrip\`)*: Cloudflare Workers Cron (\`0 1 * * *\`, *매일 오전 10:00 KST*)`,
     `  - 동작: \`${ondoRepo}\` 자동 공개 발행 ${ondoCount}건 및 Slack 보고`,
-    "• *Instagram_TrailLog (`traillog`)*: GitHub Actions Cron (*매일 09:00 · 11:00 · 13:00 · 15:00 · 17:00 KST*)",
-    "  - 동작: `kkubunge/Instagram_TrailLog` 미게시 코스 카드뉴스 자동 게시 및 Slack 보고 (일일 상한 5건)",
+    `• *Instagram_TrailLog (\`인스타\`, \`traillog\`)*: Cloudflare Workers Cron (\`0 0,2,4,6,8 * * *\`, *매일 09:00 · 11:00 · 13:00 · 15:00 · 17:00 KST*)`,
+    `  - 동작: \`${trailRepo}\` 미게시 코스 카드뉴스 자동 게시 및 Slack 보고 (목표 ${trailTarget}건, 트리거 실패 시 즉시 알림)`,
+    "• *일일 누락·지연·실패 감시 (Watchdog)*: Cloudflare Workers Cron (`30 10 * * *`, *매일 19:30 KST*)",
+    "  - 동작: 당일 실행 누락·20분 이상 지연·실패·목표 미달 감지 시 Slack 경고 알림",
     "",
-    "_수동 즉시 실행: `!실행 ondotrip` · `!실행 ondotrip-status` · `!실행 traillog-dryrun` · `!실행 traillog`_",
+    "_수동 즉시 실행: `!실행 온도트립` · `!실행 온도트립 상태` · `!실행 인스타 드라이런` · `!실행 인스타`_",
   );
   return lines.join("\n");
+}
+
+async function runDailyHealthWatchdog(fetchFn, env, nowMs = Date.now()) {
+  const ghToken = env.GITHUB_TOKEN || "";
+  const botToken = env.SLACK_BOT_TOKEN || "";
+  const reportChannel = env.REPORT_CHANNEL_ID || "";
+  const todayKst = formatKstDate(nowMs);
+  const ondoRepo = env.ONDOTRIP_REPO || "kkubunge/Google_OndoTrip";
+  const trailRepo = env.TRAILLOG_REPO || "kkubunge/Instagram_TrailLog";
+  const trailTarget = Math.max(1, Number.parseInt(String(env.TRAILLOG_DAILY_TARGET || "5"), 10) || 5);
+
+  const issues = [];
+  if (!ghToken) {
+    issues.push("• `GITHUB_TOKEN` 시크릿이 설정되지 않아 일일 실행 점검을 수행할 수 없습니다.");
+  } else {
+    const ghHeaders = {
+      Authorization: `Bearer ${ghToken}`,
+      Accept: "application/vnd.github+json",
+      "User-Agent": "Slack-AutoBot-Gateway/1.0",
+      "X-GitHub-Api-Version": "2022-11-28",
+    };
+
+    const targets = [
+      { label: "Google_OndoTrip (온도트립)", repo: ondoRepo },
+      { label: "Instagram_TrailLog (인스타)", repo: trailRepo },
+    ];
+
+    for (const target of targets) {
+      try {
+        const resp = await fetchFn(
+          `https://api.github.com/repos/${target.repo}/actions/runs?per_page=10`,
+          { method: "GET", headers: ghHeaders },
+        );
+        if (!resp.ok) {
+          issues.push(`• *${target.label}*: GitHub 실행 이력 조회 실패 (HTTP ${resp.status})`);
+          continue;
+        }
+        const data = await resp.json();
+        const runs = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
+        const todayRuns = runs.filter((r) => formatKstDate(r.created_at) === todayKst);
+
+        if (todayRuns.length === 0) {
+          issues.push(
+            `• *${target.label}*: 오늘(\`${todayKst}\`) 실행 이력이 없습니다 (스케줄 드롭/미실행 의심). — <https://github.com/${target.repo}/actions|Actions 확인>`,
+          );
+          continue;
+        }
+
+        const latestCompleted = todayRuns.find((r) => r.status === "completed");
+        if (
+          latestCompleted &&
+          ["failure", "cancelled", "timed_out"].includes(latestCompleted.conclusion)
+        ) {
+          issues.push(
+            `• *${target.label}*: 오늘 최근 실행이 \`${latestCompleted.conclusion}\` 상태로 종료되었습니다. — <${latestCompleted.html_url}|#${latestCompleted.run_number} 로그>`,
+          );
+        }
+
+        const stuckRuns = todayRuns.filter((r) => {
+          if (r.status !== "queued" && r.status !== "in_progress") return false;
+          const createdMs = Date.parse(r.created_at || "");
+          return Number.isFinite(createdMs) && nowMs - createdMs >= 20 * 60 * 1000;
+        });
+        if (stuckRuns.length > 0) {
+          const r = stuckRuns[0];
+          const elapsedMin = Math.floor((nowMs - Date.parse(r.created_at)) / 60000);
+          issues.push(
+            `• *${target.label}*: 실행이 \`${r.status}\` 상태로 ${elapsedMin}분째 지연/정체 중입니다. — <${r.html_url}|#${r.run_number} 로그>`,
+          );
+        }
+      } catch (err) {
+        issues.push(`• *${target.label}*: 실행 이력 점검 예외 (${String(err)})`);
+      }
+    }
+
+    // TrailLog 일일 게시 목표 건수 확인
+    try {
+      const histResp = await fetchFn(
+        `https://api.github.com/repos/${trailRepo}/contents/published_history.json`,
+        { method: "GET", headers: ghHeaders },
+      );
+      if (histResp.ok) {
+        const fileJson = await histResp.json();
+        if (fileJson && fileJson.content) {
+          const binStr = atob(String(fileJson.content).replace(/\s+/g, ""));
+          const bytes = Uint8Array.from(binStr, (ch) => ch.charCodeAt(0));
+          const parsed = JSON.parse(new TextDecoder("utf-8").decode(bytes));
+          const published = Array.isArray(parsed?.published) ? parsed.published : [];
+          const todayPublished = published.filter(
+            (item) => formatKstDate(item?.published_at) === todayKst,
+          ).length;
+          if (todayPublished < trailTarget) {
+            issues.push(
+              `• *Instagram_TrailLog (인스타)*: 오늘(\`${todayKst}\`) 게시 건수가 목표(${trailTarget}건)에 미달했습니다 (\`${todayPublished}/${trailTarget}건\`). — <https://github.com/${trailRepo}/actions|Actions 확인>`,
+            );
+          }
+        }
+      }
+    } catch {
+      // 이력 파일 조회 예외 시 runs 기반 검사 결과만 유지
+    }
+  }
+
+  if (issues.length > 0 && reportChannel && botToken) {
+    const text = [
+      ":warning: *일일 자동화 지연·누락·실패 감지 알림*",
+      `• 기준 일자: \`${todayKst}\` (19:30 KST 일일 점검)`,
+      ...issues,
+      "",
+      "_필요 시 `!실행 온도트립` 또는 `!실행 인스타`로 즉시 재실행할 수 있습니다._",
+    ].join("\n");
+    await callSlackApi(fetchFn, botToken, "chat.postMessage", {
+      channel: reportChannel,
+      text,
+    });
+  }
+
+  return { ok: issues.length === 0, issues };
 }
 
 async function fetchRecentWorkflowRuns(fetchFn, env, perRepo = 2) {
@@ -314,6 +452,10 @@ async function dispatchToCloudWorker({
  */
 export function createHandler(deps = {}) {
   const fetchFn = deps.fetch || globalThis.fetch;
+  const nowMsFn =
+    typeof deps.nowMs === "function"
+      ? deps.nowMs
+      : () => (typeof deps.nowMs === "number" ? deps.nowMs : Date.now());
 
   return {
     async fetch(request, env, ctx) {
@@ -523,13 +665,48 @@ export function createHandler(deps = {}) {
     },
 
     async scheduled(controller, env, ctx) {
-      const repoFullName = env.ONDOTRIP_REPO || "kkubunge/Google_OndoTrip";
-      const workflowFile = env.ONDOTRIP_WORKFLOW || "daily_post.yml";
-      const ref = env.ONDOTRIP_REF || "main";
-      const count = String(env.ONDOTRIP_DAILY_COUNT || "5");
+      const cron = String(controller?.cron || "0 1 * * *");
       const reportChannel = env.REPORT_CHANNEL_ID || "";
 
       const task = (async () => {
+        // 1) 매일 09/11/13/15/17시 KST: Instagram_TrailLog 자동 게시 실행
+        if (cron === "0 0,2,4,6,8 * * *") {
+          const trailRepo = env.TRAILLOG_REPO || "kkubunge/Instagram_TrailLog";
+          const trailWf = env.TRAILLOG_WORKFLOW || "auto_publish.yml";
+          const trailRef = env.TRAILLOG_REF || "main";
+          const res = await triggerWorkflowDispatch(fetchFn, env, {
+            repoFullName: trailRepo,
+            workflowFile: trailWf,
+            ref: trailRef,
+            inputs: {
+              brd: "걷기",
+              style: "auto",
+              dry_run: "false",
+              slack_channel_id: reportChannel,
+            },
+          });
+
+          // 성공 시에는 워크플로우 완료 단계에서 게시물 링크와 함께 DM을 보고하고, 트리거 실패 시에만 즉시 경고한다.
+          if (!res.ok && reportChannel && env.SLACK_BOT_TOKEN) {
+            await callSlackApi(fetchFn, env.SLACK_BOT_TOKEN, "chat.postMessage", {
+              channel: reportChannel,
+              text: `:x: *TrailLog 자동 실행 트리거 실패* (Cloudflare Cron \`${cron}\`)\n• 대상: \`${trailRepo}\`\n\`\`\`\n${res.error}\n\`\`\``,
+            });
+          }
+          return;
+        }
+
+        // 2) 매일 19:30 KST: 당일 실행 누락·지연·실패·목표 미달 감시 워치독
+        if (cron === "30 10 * * *") {
+          await runDailyHealthWatchdog(fetchFn, env, nowMsFn());
+          return;
+        }
+
+        // 3) 기본(매일 10:00 KST, 0 1 * * *): Google_OndoTrip 일일 자동 공개 발행
+        const repoFullName = env.ONDOTRIP_REPO || "kkubunge/Google_OndoTrip";
+        const workflowFile = env.ONDOTRIP_WORKFLOW || "daily_post.yml";
+        const ref = env.ONDOTRIP_REF || "main";
+        const count = String(env.ONDOTRIP_DAILY_COUNT || "5");
         const res = await triggerWorkflowDispatch(fetchFn, env, {
           repoFullName,
           workflowFile,
@@ -545,7 +722,7 @@ export function createHandler(deps = {}) {
 
         if (reportChannel && env.SLACK_BOT_TOKEN) {
           const text = res.ok
-            ? `:alarm_clock: *OndoTrip 일일 자동 실행 시작* (Cloudflare Cron \`${controller?.cron || "0 1 * * *"}\`)\n• 대상: \`${repoFullName}\` (${count}건 자동 공개 발행)\n• <${res.actionsUrl}|GitHub Actions 진행 상황 보기>`
+            ? `:alarm_clock: *OndoTrip 일일 자동 실행 시작* (Cloudflare Cron \`${cron}\`)\n• 대상: \`${repoFullName}\` (${count}건 자동 공개 발행)\n• <${res.actionsUrl}|GitHub Actions 진행 상황 보기>`
             : `:x: *OndoTrip 일일 자동 실행 트리거 실패*\n• 대상: \`${repoFullName}\`\n\`\`\`\n${res.error}\n\`\`\``;
           await callSlackApi(fetchFn, env.SLACK_BOT_TOKEN, "chat.postMessage", {
             channel: reportChannel,

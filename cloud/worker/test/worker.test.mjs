@@ -316,6 +316,153 @@ test("Worker scheduled 핸들러: Cron 트리거 시 Google_OndoTrip 워크플�
   assert.match(calls[1].body.text, /자동 공개 발행/);
 });
 
+test("Worker scheduled 핸들러: TrailLog Cron 실행 및 트리거 실패 시 즉시 Slack 경고", async () => {
+  const calls = [];
+  let failDispatch = false;
+  const fakeFetch = async (url, init) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    if (url.includes("/actions/workflows/auto_publish.yml/dispatches")) {
+      if (failDispatch) {
+        return new Response("Internal Server Error", { status: 500 });
+      }
+      return new Response(null, { status: 204 });
+    }
+    if (url.includes("slack.com/api/chat.postMessage")) {
+      return new Response(JSON.stringify({ ok: true, ts: "1700000888.1" }), { status: 200 });
+    }
+    return new Response("{}", { status: 200 });
+  };
+
+  const handler = createHandler({ fetch: fakeFetch });
+  const env = {
+    GITHUB_TOKEN: "ghp-test",
+    SLACK_BOT_TOKEN: "xoxb-test",
+    REPORT_CHANNEL_ID: "D_OWNER",
+    TRAILLOG_REPO: "kkubunge/Instagram_TrailLog",
+    TRAILLOG_WORKFLOW: "auto_publish.yml",
+  };
+  const pending = [];
+
+  // 1. 정상 트리거 시 워크플로우만 호출하고 중복 시작 알림은 보내지 않음
+  await handler.scheduled({ cron: "0 0,2,4,6,8 * * *" }, env, { waitUntil: (p) => pending.push(p) });
+  await Promise.all(pending.splice(0));
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /kkubunge\/Instagram_TrailLog\/actions\/workflows\/auto_publish\.yml\/dispatches$/);
+  assert.equal(calls[0].body.inputs.dry_run, "false");
+  assert.equal(calls[0].body.inputs.slack_channel_id, "D_OWNER");
+
+  // 2. 트리거 실패 시 즉시 Slack DM 경고 발송
+  calls.length = 0;
+  failDispatch = true;
+  await handler.scheduled({ cron: "0 0,2,4,6,8 * * *" }, env, { waitUntil: (p) => pending.push(p) });
+  await Promise.all(pending.splice(0));
+  assert.equal(calls.length, 2);
+  assert.match(calls[1].url, /chat\.postMessage$/);
+  assert.equal(calls[1].body.channel, "D_OWNER");
+  assert.match(calls[1].body.text, /TrailLog 자동 실행 트리거 실패/);
+});
+
+test("Worker scheduled 핸들러: 19:30 KST 워치독이 지연·누락·실패 감지 시 경고 발송 및 정상 시 무알림", async () => {
+  const fixedNowMs = Date.parse("2026-11-23T10:30:00Z"); // 2026-11-23 19:30 KST
+  const slackAlerts = [];
+  let healthyMode = false;
+
+  const fakeFetch = async (url, init) => {
+    if (url.includes("kkubunge/Google_OndoTrip/actions/runs")) {
+      return new Response(
+        JSON.stringify({
+          workflow_runs: healthyMode
+            ? [
+                {
+                  status: "completed",
+                  conclusion: "success",
+                  run_number: 10,
+                  created_at: "2026-11-23T01:00:00Z",
+                  html_url: "https://github.com/kkubunge/Google_OndoTrip/actions/runs/10",
+                },
+              ]
+            : [
+                {
+                  status: "queued",
+                  conclusion: null,
+                  run_number: 11,
+                  created_at: "2026-11-23T09:50:00Z", // 40분째 지연 중
+                  html_url: "https://github.com/kkubunge/Google_OndoTrip/actions/runs/11",
+                },
+              ],
+        }),
+        { status: 200 },
+      );
+    }
+    if (url.includes("kkubunge/Instagram_TrailLog/actions/runs")) {
+      return new Response(
+        JSON.stringify({
+          workflow_runs: healthyMode
+            ? [
+                {
+                  status: "completed",
+                  conclusion: "success",
+                  run_number: 20,
+                  created_at: "2026-11-23T08:00:00Z",
+                  html_url: "https://github.com/kkubunge/Instagram_TrailLog/actions/runs/20",
+                },
+              ]
+            : [], // 오늘 실행 없음 (누락)
+        }),
+        { status: 200 },
+      );
+    }
+    if (url.includes("kkubunge/Instagram_TrailLog/contents/published_history.json")) {
+      const hist = healthyMode
+        ? {
+            published: Array.from({ length: 5 }, (_, idx) => ({
+              crs_idx: `C${idx}`,
+              published_at: "2026-11-23T05:00:00+0000",
+            })),
+          }
+        : {
+            published: [{ crs_idx: "C0", published_at: "2026-11-23T00:10:00+0000" }],
+          };
+      const b64 = Buffer.from(JSON.stringify(hist), "utf8").toString("base64");
+      return new Response(JSON.stringify({ content: b64 }), { status: 200 });
+    }
+    if (url.includes("slack.com/api/chat.postMessage")) {
+      slackAlerts.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ ok: true, ts: "1700000777.1" }), { status: 200 });
+    }
+    return new Response("{}", { status: 200 });
+  };
+
+  const handler = createHandler({ fetch: fakeFetch, nowMs: fixedNowMs });
+  const env = {
+    GITHUB_TOKEN: "ghp-test",
+    SLACK_BOT_TOKEN: "xoxb-test",
+    REPORT_CHANNEL_ID: "D_OWNER",
+    ONDOTRIP_REPO: "kkubunge/Google_OndoTrip",
+    TRAILLOG_REPO: "kkubunge/Instagram_TrailLog",
+    TRAILLOG_DAILY_TARGET: "5",
+  };
+  const pending = [];
+
+  // 1. 이상 상황 (OndoTrip 40분 지연 + TrailLog 누락 + 목표 미달 1/5건) -> 경고 발송
+  await handler.scheduled({ cron: "30 10 * * *" }, env, { waitUntil: (p) => pending.push(p) });
+  await Promise.all(pending.splice(0));
+  assert.equal(slackAlerts.length, 1);
+  assert.equal(slackAlerts[0].channel, "D_OWNER");
+  assert.equal(slackAlerts[0].thread_ts, undefined);
+  assert.match(slackAlerts[0].text, /지연·누락·실패 감지 알림/);
+  assert.match(slackAlerts[0].text, /40분째 지연/);
+  assert.match(slackAlerts[0].text, /실행 이력이 없습니다/);
+  assert.match(slackAlerts[0].text, /1\/5건/);
+
+  // 2. 모두 정상 완료 시 -> 불필요한 경고 미발송
+  slackAlerts.length = 0;
+  healthyMode = true;
+  await handler.scheduled({ cron: "30 10 * * *" }, env, { waitUntil: (p) => pending.push(p) });
+  await Promise.all(pending.splice(0));
+  assert.equal(slackAlerts.length, 0);
+});
+
 test("Worker !예약, !상태, !작업 명령 응답 검증", async () => {
   const slackPosts = [];
   const fakeFetch = async (url, init) => {
@@ -381,6 +528,7 @@ test("Worker !예약, !상태, !작업 명령 응답 검증", async () => {
   const schedJson = await schedRes.json();
   assert.equal(schedRes.status, 200);
   assert.match(schedJson.text, /오전 10:00 KST/);
+  assert.match(schedJson.text, /19:30 KST/);
   assert.match(schedJson.text, /Google_OndoTrip/);
   assert.match(schedJson.text, /Instagram_TrailLog/);
   assert.match(schedJson.text, /자동 공개 발행/);

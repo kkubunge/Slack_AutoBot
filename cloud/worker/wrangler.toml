@@ -3,8 +3,10 @@ main = "src/index.js"
 compatibility_date = "2025-10-01"
 
 [triggers]
-# 매일 UTC 01:00 = 한국시간(KST) 오전 10:00 자동 실행
-crons = ["0 1 * * *"]
+# 1) 매일 10:00 KST (UTC 01:00): Google_OndoTrip 자동 공개 발행 5건
+# 2) 매일 09/11/13/15/17시 KST (UTC 00,02,04,06,08:00): Instagram_TrailLog 자동 게시 1건씩 (일 5회)
+# 3) 매일 19:30 KST (UTC 10:30): 당일 실행 누락·지연·실패 자동 감시 및 Slack 경고
+crons = ["0 1 * * *", "0 0,2,4,6,8 * * *", "30 10 * * *"]
 
 [vars]
 GITHUB_OWNER = "kkubunge"
@@ -15,6 +17,10 @@ ONDOTRIP_REPO = "kkubunge/Google_OndoTrip"
 ONDOTRIP_WORKFLOW = "daily_post.yml"
 ONDOTRIP_REF = "main"
 ONDOTRIP_DAILY_COUNT = "5"
+TRAILLOG_REPO = "kkubunge/Instagram_TrailLog"
+TRAILLOG_WORKFLOW = "auto_publish.yml"
+TRAILLOG_REF = "main"
+TRAILLOG_DAILY_TARGET = "5"
 
 # 배포 후 아래 시크릿을 wrangler secret put으로 등록하세요:
 # npx wrangler secret put SLACK_SIGNING_SECRET
