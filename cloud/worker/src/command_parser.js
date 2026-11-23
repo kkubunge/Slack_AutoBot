@@ -11,6 +11,8 @@ const PROJECT_ALIASES = {
   트레일로그: "traillog",
   인스타: "traillog",
   인스타그램: "traillog",
+  autobot: "slack_aibot",
+  오토봇: "slack_aibot",
 };
 
 const WORKFLOW_SUBKEY_ALIASES = {
@@ -201,7 +203,7 @@ export function parseCloudCommand(rawText, defaultProject = "slack_aibot") {
         kind: "usage",
         message:
           ":information_source: 클라우드 모드에서는 기본 프로젝트 전환 대신 메시지 앞에 `[저장소]` 접두어를 붙여서 사용합니다.\n" +
-          "• 예) `[온도트립]`(`[구글블로그]`·`[ondotrip]`) `글 요약 로직 점검해줘`, `[트레일로그]`(`[인스타]`·`[traillog]`) `캡션 문구 고쳐줘`\n" +
+          "• 예) `[온도트립]`(`[구글블로그]`·`[ondotrip]`), `[트레일로그]`(`[인스타]`·`[traillog]`), `[오토봇]`(`[AutoBot]`·`[slack_aibot]`)\n" +
           "• 전체 저장소 목록은 `!프로젝트`로 확인하세요.",
       };
     }
@@ -315,13 +317,13 @@ export function parseCloudCommand(rawText, defaultProject = "slack_aibot") {
  */
 export function buildCloudHelpText() {
   return (
-    "*Slack_AIbot 클라우드 무인 모드 도움말*\n" +
+    "*AutoBot(오토봇) 클라우드 무인 모드 도움말*\n" +
     "_(로컬 PC 전원 없이 Cloudflare Workers + GitHub Actions에서 실행됩니다)_\n\n" +
     "*1. 클라우드 AI 코드 개발 & PR 생성*\n" +
     "• `[저장소] 개발 지시` → 해당 GitHub 저장소에서 AI가 코드 수정 후 브랜치·PR 자동 생성\n" +
     "• `!개발 [저장소] 지시` / `!dev [저장소] 지시` → `dev` 모드(코드 수정·검증·PR)\n" +
     "• `!분석 [저장소] 지시` / `!plan [저장소] 지시` → `plan` 모드(읽기 전용 코드 분석·계획)\n" +
-    "• 프로젝트/실행 별칭: `ondotrip` = `온도트립` / `구글블로그` | `traillog` = `트레일로그` / `인스타`\n" +
+    "• 프로젝트/실행 별칭: `ondotrip` = `온도트립` / `구글블로그` | `traillog` = `트레일로그` / `인스타` | `slack_aibot` = `AutoBot` / `오토봇`\n" +
     "• 슬래시 명령: `/ai [온도트립] 글 작성 로직 구조 분석해줘`\n\n" +
     "*2. 원격 저장소·워크플로우·예약·상태 조회*\n" +
     "• `!프로젝트` / `!projects` → 등록된 GitHub 저장소 및 실행 프리셋 목록 조회\n" +

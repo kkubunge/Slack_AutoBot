@@ -44,6 +44,8 @@ _PROJECT_ALIASES: dict[str, str] = {
     "트레일로그": "traillog",
     "인스타": "traillog",
     "인스타그램": "traillog",
+    "autobot": "slack_aibot",
+    "오토봇": "slack_aibot",
 }
 
 _WORKFLOW_SUBKEY_ALIASES: dict[str, str] = {
@@ -387,7 +389,7 @@ class CommandRouter:
         agy_status = f"감지됨 (`{self.config.agy_cli_path}`)" if self.config.agy_cli_path else ":warning: 미감지"
 
         lines = [
-            "*Slack_AIbot 상태*",
+            "*AutoBot(오토봇) 상태*",
             f"• 가동 시간: `{hours}시간 {mins}분 {secs}초`",
             f"• 현재 채널 기본 프로젝트: `{proj}` (`{self.config.projects[proj].path}`)" if proj in self.config.projects else f"• 현재 프로젝트: `{proj}`",
             f"• 현재 AI 모델 / 모드: `{model}` / `{mode}`",

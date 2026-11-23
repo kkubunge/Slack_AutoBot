@@ -1,6 +1,6 @@
 display_information:
-  name: Slack_AIbot
-  description: Slack_AIbot — Slack으로 로컬 프로젝트 실행, 예약 작업 관리 및 Antigravity AI 개발을 제어하는 봇
+  name: AutoBot
+  description: AutoBot(오토봇) — Slack으로 로컬 프로젝트 실행, 예약 작업 관리 및 Antigravity AI 개발을 제어하는 봇
   background_color: "#1a237e"
 features:
   app_home:
@@ -8,7 +8,7 @@ features:
     messages_tab_enabled: true
     messages_tab_read_only_enabled: false
   bot_user:
-    display_name: Slack_AIbot
+    display_name: AutoBot
     always_online: true
 oauth_config:
   scopes:

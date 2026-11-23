@@ -73,7 +73,7 @@ def _mask_token(token: str) -> str:
 def run_check(config: AppConfig) -> int:
     """로컬 환경, 설정 파일, agy CLI, 프로젝트 경로 및 DB 상태를 점검한다."""
     print("============================================================")
-    print("  Slack_AIbot 환경 점검")
+    print("  AutoBot(오토봇) 환경 점검")
     print("============================================================")
     print(f"• 기준 폴더       : {config.base_dir}")
     print(f"• 설정 파일       : {config.config_path} ({'존재' if config.config_path.is_file() else '없음'})")
@@ -121,7 +121,7 @@ def run_local_cli(config: AppConfig) -> int:
     sink = LocalConsoleReplySink()
 
     print("============================================================")
-    print("  Slack_AIbot 로컬 테스트 콘솔 (--local-cli)")
+    print("  AutoBot(오토봇) 로컬 테스트 콘솔 (--local-cli)")
     print("  • Slack에 입력할 명령(!도움, !프로젝트, !실행 등) 또는 AI 지시를 입력하세요.")
     print("  • 스레드 이어쓰기 테스트: '/newthread'로 새 스레드 시작")
     print("  • 종료: 'exit' 또는 'quit'")

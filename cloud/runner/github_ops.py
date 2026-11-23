@@ -152,7 +152,7 @@ def commit_push_and_create_pr(
     req_fn = transport or _default_github_request
     pr_url_api = f"https://api.github.com/repos/{repo_full_name}/pulls"
     pr_body = (
-        f"## Slack_AIbot 클라우드 자동 PR (`{job_id}`)\n\n"
+        f"## AutoBot 클라우드 자동 PR (`{job_id}`)\n\n"
         f"**요청 지시**\n> {prompt}\n\n"
         f"**AI 요약**\n{summary[:2500]}\n"
     )
@@ -161,7 +161,7 @@ def commit_push_and_create_pr(
         pr_url_api,
         token,
         {
-            "title": f"[Slack_AIbot] {short_prompt or job_id}",
+            "title": f"[AutoBot] {short_prompt or job_id}",
             "head": branch_name,
             "base": base_branch,
             "body": pr_body,

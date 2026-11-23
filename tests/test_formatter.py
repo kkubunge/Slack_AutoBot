@@ -70,5 +70,6 @@ def test_format_reports_and_help() -> None:
     assert "boom!" in task_rep
 
     help_text = format_help_message()
+    assert "AutoBot(오토봇)" in help_text
     assert "!실행" in help_text
     assert "!예약" in help_text

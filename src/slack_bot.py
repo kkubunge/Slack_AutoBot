@@ -305,7 +305,7 @@ class SlackControllerBot:
                 self.app.client.chat_postMessage(
                     channel=self.config.slack.report_channel_id,
                     text=(
-                        ":rocket: *Slack_AIbot이 온라인 상태가 되었습니다.*\n"
+                        ":rocket: *AutoBot(오토봇)이 온라인 상태가 되었습니다.*\n"
                         f"• 기본 프로젝트: `{self.config.default_project}` | 기본 모델: `{self.config.ai.default_model}`\n"
                         "• 명령어 안내는 `!도움`을 입력해 주세요."
                     ),

@@ -291,5 +291,11 @@ def test_korean_project_and_task_aliases(tmp_path: Path) -> None:
 
         router.handle_message(IncomingMessage("!실행 구글블로그 상태", "U_ALLOWED", "C1", "5", "5"), sink)
         assert fake_task.calls[-1] == ("ondotrip-status", cfg.projects["ondotrip"].path, "")
+
+        router.handle_message(IncomingMessage("!선택 오토봇", "U_ALLOWED", "C1", "6", "6"), sink)
+        assert "slack_aibot" in sink.immediate[-1]
+
+        router.handle_message(IncomingMessage("[AutoBot] 확인해줘", "U_ALLOWED", "C1", "7", "7"), sink)
+        assert fake_agy.calls[-1]["cwd"] == cfg.projects["slack_aibot"].path
     finally:
         store.close()

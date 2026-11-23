@@ -32,6 +32,8 @@ _PROJECT_ALIASES: dict[str, str] = {
     "트레일로그": "traillog",
     "인스타": "traillog",
     "인스타그램": "traillog",
+    "autobot": "slack_aibot",
+    "오토봇": "slack_aibot",
 }
 
 _WORKFLOW_SUBKEY_ALIASES: dict[str, str] = {
@@ -132,7 +134,7 @@ def build_list_report(cloud_cfg: CloudAppConfig, list_target: str) -> str:
         lines.append(f"• `{key}` → `{wf.repo}` / `{wf.workflow}` — {wf.description}")
     lines.append(
         "\n_사용 예시: `!실행 인스타 드라이런` 또는 `[온도트립] 글 작성 로직 분석해줘`_\n"
-        "_별칭: 온도트립·구글블로그 → `ondotrip` | 트레일로그·인스타 → `traillog`_"
+        "_별칭: 온도트립·구글블로그 → `ondotrip` | 트레일로그·인스타 → `traillog` | AutoBot·오토봇 → `slack_aibot`_"
     )
     return "\n".join(lines)
 
@@ -357,7 +359,7 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-    parser = argparse.ArgumentParser(description="Slack_AIbot 클라우드 워커")
+    parser = argparse.ArgumentParser(description="AutoBot(오토봇) 클라우드 워커")
     parser.add_argument("--payload-file", default="", help="페이로드 JSON 파일 경로(선택)")
     args = parser.parse_args(argv)
 

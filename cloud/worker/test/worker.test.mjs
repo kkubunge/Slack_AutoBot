@@ -88,6 +88,9 @@ test("parseCloudCommand: 한글 별칭(온도트립·구글블로그·트레일�
 
   assert.equal(parseCloudCommand("[구글블로그] 구조 분석").project, "ondotrip");
   assert.equal(parseCloudCommand("[구글 블로그] 구조 분석").project, "ondotrip");
+  assert.equal(parseCloudCommand("[AutoBot] README 확인").project, "slack_aibot");
+  assert.equal(parseCloudCommand("[오토봇] README 확인").project, "slack_aibot");
+  assert.equal(parseCloudCommand("[오토 봇] README 확인").project, "slack_aibot");
 
   const planTrail = parseCloudCommand("!분석 [트레일로그] 확인");
   assert.equal(planTrail.action, "ai");
@@ -412,7 +415,7 @@ test("Worker !예약, !상태, !작업 명령 응답 검증", async () => {
   await Promise.all(pending.splice(0));
 
   assert.equal(slackPosts.length, 2);
-  assert.match(slackPosts[0].text, /클라우드 게이트웨이 상태/);
+  assert.match(slackPosts[0].text, /AutoBot\(오토봇\) 클라우드 게이트웨이 상태/);
   assert.match(slackPosts[0].text, /2026-11-23 10:00 KST/);
   assert.equal(slackPosts[0].thread_ts, undefined);
   assert.match(slackPosts[1].text, /GitHub Actions 작업 이력/);

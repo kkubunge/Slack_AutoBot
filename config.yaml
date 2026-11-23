@@ -29,7 +29,7 @@ reporting:
 projects:
   slack_aibot:
     path: "Slack_AIbot"
-    description: "Slack_AIbot — Slack 기반 AI 개발·제어 컨트롤러 (본 프로젝트)"
+    description: "AutoBot(오토봇) — Slack 기반 AI 개발·제어 컨트롤러 (본 프로젝트)"
   ondotrip:
     path: "Google_OndoTrip"
     description: "공공데이터 기반 구글 블로그 자동 포스팅"

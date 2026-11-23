@@ -186,7 +186,7 @@ function formatRunOutcome(run) {
 async function buildCloudStatusText(fetchFn, env) {
   const res = await fetchRecentWorkflowRuns(fetchFn, env, 1);
   const lines = [
-    "*Slack_AIbot 클라우드 게이트웨이 상태*",
+    "*AutoBot(오토봇) 클라우드 게이트웨이 상태*",
     `• 게이트웨이: \`온라인\` (Cloudflare Workers)`,
     `• 기본 저장소: \`${env.DEFAULT_PROJECT || "slack_aibot"}\` | 일일 Cron: \`0 1 * * *\` (매일 10:00 KST \`ondotrip\`)`,
     "",

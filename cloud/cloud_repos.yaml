@@ -15,7 +15,7 @@ repos:
   slack_aibot:
     repo: "kkubunge/Slack_AIbot"
     default_branch: "main"
-    description: "Slack_AIbot (로컬·클라우드 AI 개발 컨트롤러)"
+    description: "AutoBot(오토봇) — 로컬·클라우드 AI 개발 컨트롤러"
   traillog:
     repo: "kkubunge/Instagram_TrailLog"
     default_branch: "main"

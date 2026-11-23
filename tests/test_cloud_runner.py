@@ -402,3 +402,13 @@ def test_execute_cloud_payload_supports_korean_aliases(monkeypatch: pytest.Monke
         agent=FakeAgent(),
     ) == 0
     assert "kkubunge/Google_OndoTrip" in slack_msgs[-1]
+
+    for bot_alias in ("오토봇", "AutoBot"):
+        assert execute_cloud_payload(
+            payload={"job_id": f"a-{bot_alias}", "action": "ai", "project": bot_alias, "mode": "plan", "prompt": "점검", "channel_id": "D1"},
+            cloud_cfg=cfg,
+            reporter=reporter2,
+            target_repo_dir=tmp_path,
+            agent=FakeAgent(),
+        ) == 0
+        assert "kkubunge/Slack_AIbot" in slack_msgs[-1]
