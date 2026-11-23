@@ -1,0 +1,214 @@
+import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
+import test from "node:test";
+
+import { checkAuthorization, parseCloudCommand } from "../src/command_parser.js";
+import { createHandler } from "../src/index.js";
+import { verifySlackSignature } from "../src/slack_verify.js";
+
+function signSlackBody(secret, timestamp, rawBody) {
+  const hmac = createHmac("sha256", secret);
+  hmac.update(`v0:${timestamp}:${rawBody}`);
+  return `v0=${hmac.digest("hex")}`;
+}
+
+test("verifySlackSignature: 정상 서명, 잘못된 서명, 만료 타임스탬프 검증", async () => {
+  const secret = "test_signing_secret";
+  const ts = "1700000000";
+  const body = '{"type":"url_verification","challenge":"abc"}';
+  const sig = signSlackBody(secret, ts, body);
+
+  const valid = await verifySlackSignature({
+    signingSecret: secret,
+    timestamp: ts,
+    signature: sig,
+    rawBody: body,
+    nowSec: 1700000010,
+  });
+  assert.equal(valid.ok, true);
+
+  const invalid = await verifySlackSignature({
+    signingSecret: secret,
+    timestamp: ts,
+    signature: "v0=deadbeef",
+    rawBody: body,
+    nowSec: 1700000010,
+  });
+  assert.equal(invalid.ok, false);
+
+  const expired = await verifySlackSignature({
+    signingSecret: secret,
+    timestamp: ts,
+    signature: sig,
+    rawBody: body,
+    nowSec: 1700000400,
+  });
+  assert.equal(expired.ok, false);
+});
+
+test("parseCloudCommand: 도움말, 목록, 워크플로우 실행, [프로젝트] 분기 파싱", () => {
+  assert.equal(parseCloudCommand("<@U12345> !도움").kind, "help");
+
+  const listProjects = parseCloudCommand("<@U12345> !프로젝트");
+  assert.equal(listProjects.action, "list");
+  assert.equal(listProjects.prompt, "projects");
+
+  const runWf = parseCloudCommand("!실행 traillog --dry-run");
+  assert.equal(runWf.action, "run");
+  assert.equal(runWf.workflow, "traillog");
+  assert.equal(runWf.extraArgs, "--dry-run");
+
+  const planCmd = parseCloudCommand("!분석 [daylog] 앱 구조 파악해줘");
+  assert.equal(planCmd.action, "ai");
+  assert.equal(planCmd.mode, "plan");
+  assert.equal(planCmd.project, "daylog");
+  assert.equal(planCmd.prompt, "앱 구조 파악해줘");
+
+  const devDefault = parseCloudCommand("<@U999> [traillog] 캡션 문구 고쳐줘");
+  assert.equal(devDefault.action, "ai");
+  assert.equal(devDefault.mode, "dev");
+  assert.equal(devDefault.project, "traillog");
+  assert.equal(devDefault.prompt, "캡션 문구 고쳐줘");
+});
+
+test("checkAuthorization: 허용 목록 미설정/불일치 차단 및 ALLOW_ALL_USERS 허용", () => {
+  const unconfigured = checkAuthorization({
+    userId: "U_NEW",
+    channelId: "C1",
+    allowedUserIdsCsv: "",
+    allowedChannelIdsCsv: "",
+    allowAllUsers: "false",
+  });
+  assert.equal(unconfigured.allowed, false);
+  assert.match(unconfigured.message, /U_NEW/);
+
+  const denied = checkAuthorization({
+    userId: "U_BAD",
+    channelId: "C1",
+    allowedUserIdsCsv: "U_ADMIN",
+    allowedChannelIdsCsv: "",
+    allowAllUsers: "false",
+  });
+  assert.equal(denied.allowed, false);
+
+  const allowed = checkAuthorization({
+    userId: "U_ADMIN",
+    channelId: "C1",
+    allowedUserIdsCsv: "U_ADMIN",
+    allowedChannelIdsCsv: "C1",
+    allowAllUsers: "false",
+  });
+  assert.equal(allowed.allowed, true);
+});
+
+test("Worker HTTP 핸들러: health, url_verification, retry 무시, app_mention 및 /slack/commands", async () => {
+  const calls = [];
+  const fakeFetch = async (url, init) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    if (url.includes("slack.com/api/chat.postMessage")) {
+      return new Response(JSON.stringify({ ok: true, ts: "1700000100.123456" }), { status: 200 });
+    }
+    if (url.includes("api.github.com/repos/kkubunge/Slack_AIbot/dispatches")) {
+      return new Response(null, { status: 204 });
+    }
+    return new Response("{}", { status: 200 });
+  };
+
+  const secret = "worker_secret";
+  const nowSec = 1700000000;
+  const handler = createHandler({ fetch: fakeFetch, nowSec });
+  const env = {
+    SLACK_SIGNING_SECRET: secret,
+    SLACK_BOT_TOKEN: "xoxb-test",
+    GITHUB_TOKEN: "ghp-test",
+    GITHUB_OWNER: "kkubunge",
+    GITHUB_REPO: "Slack_AIbot",
+    ALLOWED_USER_IDS: "U_OWNER",
+    ALLOW_ALL_USERS: "false",
+    DEFAULT_PROJECT: "slack_aibot",
+  };
+  const pending = [];
+  const ctx = { waitUntil: (p) => pending.push(p) };
+
+  // 1. /health
+  const healthRes = await handler.fetch(new Request("https://worker.dev/health"), env, ctx);
+  assert.equal(healthRes.status, 200);
+
+  // 2. url_verification
+  const challengeBody = JSON.stringify({ type: "url_verification", challenge: "xyz-999" });
+  const challengeReq = new Request("https://worker.dev/slack/events", {
+    method: "POST",
+    headers: {
+      "X-Slack-Request-Timestamp": String(nowSec),
+      "X-Slack-Signature": signSlackBody(secret, String(nowSec), challengeBody),
+    },
+    body: challengeBody,
+  });
+  const challengeRes = await handler.fetch(challengeReq, env, ctx);
+  assert.equal((await challengeRes.json()).challenge, "xyz-999");
+
+  // 3. Retry 무시
+  const retryReq = new Request("https://worker.dev/slack/events", {
+    method: "POST",
+    headers: { "X-Slack-Retry-Num": "1" },
+    body: "{}",
+  });
+  const retryRes = await handler.fetch(retryReq, env, ctx);
+  assert.equal((await retryRes.json()).ignored, "retry");
+  assert.equal(calls.length, 0);
+
+  // 4. app_mention -> Slack 접수 + GitHub dispatch
+  const eventBody = JSON.stringify({
+    type: "event_callback",
+    event: {
+      type: "app_mention",
+      user: "U_OWNER",
+      channel: "C_DEV",
+      ts: "1700000050.000100",
+      text: "<@U_BOT> [daylog] 다크모드 확인해줘",
+    },
+  });
+  const eventReq = new Request("https://worker.dev/slack/events", {
+    method: "POST",
+    headers: {
+      "X-Slack-Request-Timestamp": String(nowSec),
+      "X-Slack-Signature": signSlackBody(secret, String(nowSec), eventBody),
+    },
+    body: eventBody,
+  });
+  const eventRes = await handler.fetch(eventReq, env, ctx);
+  assert.equal(eventRes.status, 200);
+  await Promise.all(pending.splice(0));
+
+  assert.equal(calls.length, 2);
+  assert.match(calls[0].url, /chat\.postMessage/);
+  assert.match(calls[1].url, /dispatches$/);
+  assert.equal(calls[1].body.event_type, "slack_ai_command");
+  assert.equal(calls[1].body.client_payload.project, "daylog");
+  assert.equal(calls[1].body.client_payload.status_ts, "1700000100.123456");
+
+  // 5. /slack/commands (/ai)
+  const formBody = new URLSearchParams({
+    user_id: "U_OWNER",
+    channel_id: "C_DEV",
+    text: "!실행 traillog-dryrun",
+    response_url: "https://hooks.slack.com/commands/123",
+  }).toString();
+  const cmdReq = new Request("https://worker.dev/slack/commands", {
+    method: "POST",
+    headers: {
+      "X-Slack-Request-Timestamp": String(nowSec),
+      "X-Slack-Signature": signSlackBody(secret, String(nowSec), formBody),
+    },
+    body: formBody,
+  });
+  const cmdRes = await handler.fetch(cmdReq, env, ctx);
+  assert.equal(cmdRes.status, 200);
+  const cmdJson = await cmdRes.json();
+  assert.equal(cmdJson.response_type, "in_channel");
+  await Promise.all(pending.splice(0));
+
+  assert.equal(calls.length, 4);
+  assert.equal(calls[3].body.client_payload.action, "run");
+  assert.equal(calls[3].body.client_payload.workflow, "traillog-dryrun");
+});

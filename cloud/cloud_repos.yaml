@@ -1,0 +1,54 @@
+# Slack_AIbot 클라우드 무인 버전(GitHub Actions + Gemini API) 저장소 및 워크플로우 설정
+
+default_repo: "slack_aibot"
+
+gemini:
+  default_model: "gemini-2.5-pro"
+  fallback_models:
+    - "gemini-2.5-pro"
+    - "gemini-2.5-flash"
+    - "gemini-3.5-flash"
+    - "gemini-flash-latest"
+  max_turns: 15
+
+repos:
+  slack_aibot:
+    repo: "kkubunge/Slack_AIbot"
+    default_branch: "main"
+    description: "Slack_AIbot (로컬·클라우드 AI 개발 컨트롤러)"
+  traillog:
+    repo: "kkubunge/Instagram_TrailLog"
+    default_branch: "main"
+    description: "두루누비 인스타그램 카드뉴스 자동화"
+  daylog:
+    repo: "kkubunge/Daylog"
+    default_branch: "master"
+    description: "Daylog Android 앱"
+  videoplayer:
+    repo: "kkubunge/VideoPlayer"
+    default_branch: "master"
+    description: "VideoPlayer Android 앱"
+  videodownloader:
+    repo: "kkubunge/AppVideoDownloader_re2"
+    default_branch: "master"
+    description: "VideoDownloader Android 앱"
+
+workflows:
+  traillog:
+    repo: "kkubunge/Instagram_TrailLog"
+    workflow: "auto_publish.yml"
+    ref: "main"
+    inputs:
+      brd: "걷기"
+      style: "auto"
+      dry_run: false
+    description: "TrailLog 미게시 코스 카드뉴스 생성 및 인스타 게시"
+  traillog-dryrun:
+    repo: "kkubunge/Instagram_TrailLog"
+    workflow: "auto_publish.yml"
+    ref: "main"
+    inputs:
+      brd: "걷기"
+      style: "auto"
+      dry_run: true
+    description: "TrailLog 카드뉴스 사전 검증 (실제 게시 안 함)"

@@ -1,0 +1,117 @@
+name: Slack_AIbot Cloud Worker
+
+on:
+  repository_dispatch:
+    types:
+      - slack_ai_command
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "실행 유형 (ai / run / list)"
+        required: true
+        default: "list"
+        type: choice
+        options:
+          - list
+          - ai
+          - run
+      project:
+        description: "대상 저장소 키 (cloud_repos.yaml 기준)"
+        required: false
+        default: "slack_aibot"
+        type: string
+      mode:
+        description: "AI 실행 모드 (plan / dev)"
+        required: true
+        default: "plan"
+        type: choice
+        options:
+          - plan
+          - dev
+      prompt:
+        description: "AI 지시 내용 (action=ai일 때)"
+        required: false
+        default: ""
+        type: string
+      workflow:
+        description: "원격 워크플로우 키 (action=run일 때)"
+        required: false
+        default: "traillog-dryrun"
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  cloud-worker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 컨트롤러 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          path: _controller
+
+      - name: Python 3.12 설정 및 클라우드 최소 패키지 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: PyYAML 설치
+        run: python -m pip install -r _controller/cloud/runner/requirements-cloud.txt
+
+      - name: 대상 저장소 메타데이터 확인
+        id: meta
+        env:
+          PAYLOAD_JSON: ${{ toJson(github.event.client_payload) }}
+          INPUT_ACTION: ${{ inputs.action }}
+          INPUT_PROJECT: ${{ inputs.project }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, yaml
+          from pathlib import Path
+
+          raw_payload = os.environ.get("PAYLOAD_JSON", "").strip()
+          payload = json.loads(raw_payload) if raw_payload and raw_payload != "null" else {}
+          action = (payload.get("action") or os.environ.get("INPUT_ACTION") or "list").strip().lower()
+          project = (payload.get("project") or os.environ.get("INPUT_PROJECT") or "slack_aibot").strip().lower()
+
+          cfg = yaml.safe_load(Path("_controller/cloud/cloud_repos.yaml").read_text(encoding="utf-8")) or {}
+          repos = cfg.get("repos") or {}
+          repo_info = repos.get(project) or {}
+
+          need_checkout = "true" if (action == "ai" and repo_info.get("repo")) else "false"
+          print(f"action={action}")
+          print(f"project={project}")
+          print(f"repo_full_name={repo_info.get('repo', '')}")
+          print(f"default_branch={repo_info.get('default_branch', 'main')}")
+          print(f"need_checkout={need_checkout}")
+          PY
+
+      - name: 대상 저장소 체크아웃
+        if: steps.meta.outputs.need_checkout == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.meta.outputs.repo_full_name }}
+          ref: ${{ steps.meta.outputs.default_branch }}
+          path: target_repo
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: 클라우드 AI / 워크플로우 워커 실행 및 Slack 보고
+        env:
+          PYTHONPATH: ${{ github.workspace }}/_controller
+          PAYLOAD_JSON: ${{ toJson(github.event.client_payload) }}
+          INPUT_ACTION: ${{ inputs.action }}
+          INPUT_PROJECT: ${{ inputs.project }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_PROMPT: ${{ inputs.prompt }}
+          INPUT_WORKFLOW: ${{ inputs.workflow }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_REPORT_CHANNEL_ID: ${{ secrets.SLACK_REPORT_CHANNEL_ID }}
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          TARGET_REPO_DIR: ${{ github.workspace }}/target_repo
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python -m cloud.runner.main

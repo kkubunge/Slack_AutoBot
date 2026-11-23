@@ -2,7 +2,10 @@
 
 GitHub 저장소: `https://github.com/kkubunge/Slack_AIbot.git`
 
-Windows 작업 스케줄러 대신 **Slack(Socket Mode)** 으로 원격 명령을 내리고, 실시간 진행 상황과 완료 결과를 보고받으며, 로컬 **Antigravity CLI (`agy.exe`)** 를 통해 `GoogleAI_PJT` 하위 프로젝트의 **AI 기반 코드 개발·분석·검증**과 **기존 자동화 작업 실행/예약**을 제어하는 통합 컨트롤러입니다.
+Windows 작업 스케줄러 대신 **Slack** 으로 원격 명령을 내리고, 실시간 진행 상황과 완료 결과를 보고받으며 AI 기반 코드 개발·분석·자동화 작업을 제어하는 통합 컨트롤러입니다.
+
+- **로컬 PC 모드 (`src/`)**: Socket Mode로 로컬 PC의 `agy.EXE` 및 로컬 프로젝트(`.venv`) 제어
+- **클라우드 무인 모드 (`cloud/`, `.github/workflows/`)**: **로컬 PC 전원 없이** `Slack ↔ Cloudflare Workers ↔ GitHub Actions + Gemini API`로 24시간 AI 코드 개발·PR 자동 생성·원격 워크플로우 실행 및 보고 ([클라우드 배포 가이드](cloud/README_CLOUD.md))
 
 ---
 
@@ -10,6 +13,14 @@ Windows 작업 스케줄러 대신 **Slack(Socket Mode)** 으로 원격 명령�
 
 ```text
 Slack_AIbot/
+├── .github/workflows/
+│   └── slack_ai_worker.yml   # GitHub Actions 클라우드 AI 워커
+├── cloud/                    # 로컬 PC 없는 클라우드 무인 모드 (방법 A)
+│   ├── README_CLOUD.md       # Cloudflare Workers + GitHub Actions 5분 배포 가이드
+│   ├── cloud_repos.yaml      # 원격 제어 대상 GitHub 저장소 및 워크플로우 목록
+│   ├── slack_cloud_manifest.yaml
+│   ├── worker/               # Cloudflare Workers Webhook 수신 게이트웨이
+│   └── runner/               # Gemini Function Calling 에이전트 및 PR·Slack 보고 러너
 ├── .env.example              # Slack 토큰 및 권한 설정 템플릿
 ├── .gitignore                # .env, .venv, data, logs 등 제외 규칙
 ├── config.yaml               # 프로젝트 목록, AI 모델/모드, 프리셋 작업 설정
@@ -38,10 +49,23 @@ Slack_AIbot/
     ├── test_command_router.py
     ├── test_config.py
     ├── test_formatter.py
-    ├── test_scheduler_service.py
-    ├── test_state_store.py
-    └── test_task_runner.py
+│   ├── test_scheduler_service.py
+│   ├── test_state_store.py
+│   ├── test_task_runner.py
+│   └── test_cloud_runner.py
 ```
+
+---
+
+## 두 가지 운영 모드 선택
+
+| 구분 | 로컬 PC 모드 (`src/`) | 클라우드 무인 모드 (`cloud/`) |
+| :--- | :--- | :--- |
+| **PC 전원** | 로컬 PC 상시 켜짐 필요 | **PC 꺼져 있어도 24시간 동작** |
+| **통신 방식** | Slack Socket Mode | Cloudflare Workers Webhook + GitHub Actions |
+| **AI 엔진** | 로컬 `agy.EXE` (Antigravity CLI) | Gemini REST API Function Calling (`GEMINI_API_KEY`) |
+| **적합한 작업** | 로컬 전용 파일, 브라우저 로그인 필요한 티스토리 자동화 등 | GitHub 저장소 코드 개발·자동 PR 생성, `TrailLog` 등 Actions 실행 |
+| **상세 안내** | 아래 가이드 참고 | [`cloud/README_CLOUD.md`](cloud/README_CLOUD.md) 참고 |
 
 ---
 
@@ -143,6 +167,7 @@ run_bot.bat
 
 ```powershell
 run_tests.bat
-# 또는
+# 또는 전체 Python 테스트 + Cloudflare Workers 테스트
 .\.venv\Scripts\python.exe -m pytest -v
+node --test cloud\worker\test\worker.test.mjs
 ```
