@@ -283,7 +283,7 @@ async function dispatchToCloudWorker({
     extra_args: parsed.extraArgs || "",
     slack: {
       channel_id: channelId || "",
-      thread_ts: threadTs || statusTs || "",
+      thread_ts: threadTs || "",
       status_ts: statusTs,
       user_id: userId || "",
       response_url: responseUrl,
@@ -369,7 +369,8 @@ export function createHandler(deps = {}) {
 
         const userId = String(evt.user || "");
         const channelId = String(evt.channel || "");
-        const threadTs = String(evt.thread_ts || evt.ts || "");
+        // DM에서는 스레드 없이 본문에 바로 응답하고, 채널에서는 기존 스레드 안의 호출일 때만 스레드를 유지한다.
+        const threadTs = isDmMessage ? "" : String(evt.thread_ts || "");
         const text = String(evt.text || "");
 
         const work = async () => {
@@ -383,7 +384,7 @@ export function createHandler(deps = {}) {
           if (!auth.allowed) {
             await callSlackApi(fetchFn, env.SLACK_BOT_TOKEN, "chat.postMessage", {
               channel: channelId,
-              thread_ts: threadTs,
+              ...(threadTs ? { thread_ts: threadTs } : {}),
               text: auth.message,
             });
             return;
@@ -399,7 +400,7 @@ export function createHandler(deps = {}) {
                   : parsed.message;
             await callSlackApi(fetchFn, env.SLACK_BOT_TOKEN, "chat.postMessage", {
               channel: channelId,
-              thread_ts: threadTs,
+              ...(threadTs ? { thread_ts: threadTs } : {}),
               text: replyText,
             });
             return;
@@ -412,7 +413,7 @@ export function createHandler(deps = {}) {
                 : await buildCloudJobsText(fetchFn, env);
             await callSlackApi(fetchFn, env.SLACK_BOT_TOKEN, "chat.postMessage", {
               channel: channelId,
-              thread_ts: threadTs,
+              ...(threadTs ? { thread_ts: threadTs } : {}),
               text: reportText,
             });
             return;

@@ -212,11 +212,13 @@ class SlackControllerBot:
             raw_thread_ts = str(event.get("thread_ts") or "")
             is_thread_reply = bool(raw_thread_ts and raw_thread_ts != msg_ts)
             effective_thread_ts = raw_thread_ts or msg_ts
+            # 채널 본문 호출은 본문에 바로 응답하고, 기존 스레드 내 호출만 스레드를 유지한다.
+            reply_thread_ts = raw_thread_ts
 
             sink = SlackReplySink(
                 client=client,
                 channel_id=channel_id,
-                thread_ts=effective_thread_ts,
+                thread_ts=reply_thread_ts,
                 reaction_ts=msg_ts,
             )
             incoming = IncomingMessage(
@@ -274,10 +276,12 @@ class SlackControllerBot:
             if not self.event_cache.mark_if_new(channel_id, msg_ts):
                 return
 
+            # DM에서는 항상 본문에 바로 응답하고, 채널에서는 기존 스레드 내 호출만 스레드를 유지한다.
+            reply_thread_ts = "" if is_dm else raw_thread_ts
             sink = SlackReplySink(
                 client=client,
                 channel_id=channel_id,
-                thread_ts=effective_thread_ts,
+                thread_ts=reply_thread_ts,
                 reaction_ts=msg_ts,
             )
             incoming = IncomingMessage(

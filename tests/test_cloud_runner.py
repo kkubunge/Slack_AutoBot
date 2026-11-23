@@ -321,3 +321,31 @@ def test_execute_cloud_payload_run_injects_slack_channel_id(monkeypatch: pytest.
     assert captured[0]["repo_full_name"] == "kkubunge/Instagram_TrailLog"
     assert captured[0]["inputs"]["slack_channel_id"] == "D0CL64CQGJY"
     assert "자동 보고" in slack_calls[-1][1]["text"]
+
+
+def test_slack_web_reporter_posts_to_main_without_thread_ts() -> None:
+    """thread_ts가 비어 있을 때 첫 청크 갱신 및 추가 청크 전송 모두 thread_ts 없이 본문에 게시하는지 검증한다."""
+    calls: list[tuple[str, dict]] = []
+
+    def fake_slack(url: str, headers: dict[str, str], body: dict):
+        calls.append((url, body))
+        if url.endswith("chat.update"):
+            return {"ok": True, "ts": body["ts"]}
+        return {"ok": True, "ts": "200.1"}
+
+    reporter = SlackWebReporter(bot_token="xoxb-test", transport=fake_slack)
+    long_text = "첫째줄입니다.\n" + ("긴 본문 내용입니다. " * 10)
+    reporter.report_final(
+        channel="D0CL64CQGJY",
+        thread_ts="",
+        status_ts="100.1",
+        report_text=long_text,
+        max_chars=50,
+    )
+
+    assert len(calls) >= 2
+    assert calls[0][0].endswith("chat.update")
+    assert calls[0][1]["ts"] == "100.1"
+    for url, body in calls[1:]:
+        assert url.endswith("chat.postMessage")
+        assert "thread_ts" not in body

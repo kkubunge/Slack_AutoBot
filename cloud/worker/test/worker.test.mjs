@@ -190,10 +190,12 @@ test("Worker HTTP 핸들러: health, url_verification, retry 무시, app_mention
 
   assert.equal(calls.length, 2);
   assert.match(calls[0].url, /chat\.postMessage/);
+  assert.equal(calls[0].body.thread_ts, undefined);
   assert.match(calls[1].url, /dispatches$/);
   assert.equal(calls[1].body.event_type, "slack_ai_command");
   assert.ok(Object.keys(calls[1].body.client_payload).length <= 10);
   assert.equal(calls[1].body.client_payload.project, "ondotrip");
+  assert.equal(calls[1].body.client_payload.slack.thread_ts, "");
   assert.equal(calls[1].body.client_payload.slack.status_ts, "1700000100.123456");
 
   // 5. /slack/commands (/ai)
@@ -368,5 +370,49 @@ test("Worker !예약, !상태, !작업 명령 응답 검증", async () => {
   assert.equal(slackPosts.length, 2);
   assert.match(slackPosts[0].text, /클라우드 게이트웨이 상태/);
   assert.match(slackPosts[0].text, /2026-11-23 10:00 KST/);
+  assert.equal(slackPosts[0].thread_ts, undefined);
   assert.match(slackPosts[1].text, /GitHub Actions 작업 이력/);
+  assert.equal(slackPosts[1].thread_ts, undefined);
+
+  // 3. DM에서 thread_ts가 있더라도 본문에 응답하고, 채널 기존 스레드 안의 app_mention만 스레드 유지
+  slackPosts.length = 0;
+  for (const evt of [
+    {
+      type: "message",
+      channel_type: "im",
+      user: "U_OWNER",
+      channel: "D_OWNER",
+      ts: "1700000060.000100",
+      thread_ts: "1700000050.000100",
+      text: "!예약",
+    },
+    {
+      type: "app_mention",
+      user: "U_OWNER",
+      channel: "C_DEV",
+      ts: "1700000061.000100",
+      thread_ts: "1700000010.000001",
+      text: "<@U_BOT> !예약",
+    },
+  ]) {
+    const evtBody = JSON.stringify({ type: "event_callback", event: evt });
+    const res = await handler.fetch(
+      new Request("https://worker.dev/slack/events", {
+        method: "POST",
+        headers: {
+          "X-Slack-Request-Timestamp": String(nowSec),
+          "X-Slack-Signature": signSlackBody(secret, String(nowSec), evtBody),
+        },
+        body: evtBody,
+      }),
+      env,
+      ctx,
+    );
+    assert.equal(res.status, 200);
+  }
+  await Promise.all(pending.splice(0));
+
+  assert.equal(slackPosts.length, 2);
+  assert.equal(slackPosts[0].thread_ts, undefined);
+  assert.equal(slackPosts[1].thread_ts, "1700000010.000001");
 });

@@ -108,14 +108,12 @@ class SlackWebReporter:
                 self.post_response_url(response_url, chunks[0])
             return
 
-        effective_thread = thread_ts or status_ts
+        effective_thread = thread_ts
         first_sent = False
         if status_ts:
             first_sent = self.update_message(channel, status_ts, chunks[0])
         if not first_sent:
             created_ts = self.post_message(channel, chunks[0], thread_ts=effective_thread)
-            if not effective_thread and created_ts:
-                effective_thread = created_ts
             if not created_ts and response_url:
                 self.post_response_url(response_url, chunks[0])
                 return
