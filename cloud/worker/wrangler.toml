@@ -2,15 +2,24 @@ name = "slack-aibot-gateway"
 main = "src/index.js"
 compatibility_date = "2025-10-01"
 
+[triggers]
+# 매일 UTC 01:00 = 한국시간(KST) 오전 10:00 자동 실행
+crons = ["0 1 * * *"]
+
 [vars]
 GITHUB_OWNER = "kkubunge"
 GITHUB_REPO = "Slack_AIbot"
 DEFAULT_PROJECT = "slack_aibot"
 ALLOW_ALL_USERS = "false"
+ONDOTRIP_REPO = "kkubunge/Google_OndoTrip"
+ONDOTRIP_WORKFLOW = "daily_post.yml"
+ONDOTRIP_REF = "main"
+ONDOTRIP_DAILY_COUNT = "5"
 
 # 배포 후 아래 시크릿을 wrangler secret put으로 등록하세요:
 # npx wrangler secret put SLACK_SIGNING_SECRET
 # npx wrangler secret put SLACK_BOT_TOKEN
 # npx wrangler secret put GITHUB_TOKEN
 # npx wrangler secret put ALLOWED_USER_IDS
+# npx wrangler secret put REPORT_CHANNEL_ID
 # (선택) npx wrangler secret put ALLOWED_CHANNEL_IDS

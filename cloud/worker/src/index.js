@@ -66,6 +66,38 @@ async function triggerGitHubDispatch(fetchFn, env, clientPayload) {
   return { ok: false, error: `GitHub API 오류 (${resp.status}): ${errText.slice(0, 300)}` };
 }
 
+async function triggerWorkflowDispatch(
+  fetchFn,
+  env,
+  { repoFullName, workflowFile, ref = "main", inputs = {} },
+) {
+  const token = env.GITHUB_TOKEN || "";
+  if (!token) {
+    return { ok: false, error: "GITHUB_TOKEN 시크릿이 설정되지 않았습니다." };
+  }
+  const url = `https://api.github.com/repos/${repoFullName}/actions/workflows/${workflowFile}/dispatches`;
+  const resp = await fetchFn(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json; charset=utf-8",
+      "User-Agent": "Slack-AIbot-Gateway/1.0",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+    body: JSON.stringify({ ref, inputs }),
+  });
+
+  if (resp.status === 204 || resp.ok) {
+    return {
+      ok: true,
+      actionsUrl: `https://github.com/${repoFullName}/actions/workflows/${workflowFile}`,
+    };
+  }
+  const errText = await resp.text();
+  return { ok: false, error: `Workflow Dispatch 오류 (${resp.status}): ${errText.slice(0, 300)}` };
+}
+
 function buildAckText(jobId, parsed) {
   if (parsed.action === "list") {
     return `:hourglass_flowing_sand: *클라우드 저장소/워크플로우 목록 조회 중...* (\`${jobId}\`)`;
@@ -300,6 +332,45 @@ export function createHandler(deps = {}) {
       }
 
       return jsonResponse({ ok: false, error: "Not Found" }, 404);
+    },
+
+    async scheduled(controller, env, ctx) {
+      const repoFullName = env.ONDOTRIP_REPO || "kkubunge/Google_OndoTrip";
+      const workflowFile = env.ONDOTRIP_WORKFLOW || "daily_post.yml";
+      const ref = env.ONDOTRIP_REF || "main";
+      const count = String(env.ONDOTRIP_DAILY_COUNT || "5");
+      const reportChannel = env.REPORT_CHANNEL_ID || "";
+
+      const task = (async () => {
+        const res = await triggerWorkflowDispatch(fetchFn, env, {
+          repoFullName,
+          workflowFile,
+          ref,
+          inputs: {
+            count,
+            publish: "false",
+            preview_only: "false",
+            status_only: "false",
+            slack_channel_id: reportChannel,
+          },
+        });
+
+        if (reportChannel && env.SLACK_BOT_TOKEN) {
+          const text = res.ok
+            ? `:alarm_clock: *OndoTrip 일일 자동 실행 시작* (Cloudflare Cron \`${controller?.cron || "0 1 * * *"}\`)\n• 대상: \`${repoFullName}\` (${count}건 임시저장)\n• <${res.actionsUrl}|GitHub Actions 진행 상황 보기>`
+            : `:x: *OndoTrip 일일 자동 실행 트리거 실패*\n• 대상: \`${repoFullName}\`\n\`\`\`\n${res.error}\n\`\`\``;
+          await callSlackApi(fetchFn, env.SLACK_BOT_TOKEN, "chat.postMessage", {
+            channel: reportChannel,
+            text,
+          });
+        }
+      })();
+
+      if (ctx && typeof ctx.waitUntil === "function") {
+        ctx.waitUntil(task);
+      } else {
+        await task;
+      }
     },
   };
 }

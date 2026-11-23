@@ -19,14 +19,19 @@ def test_load_cloud_config_and_yaml_syntax() -> None:
     root = Path(__file__).resolve().parent.parent
     cfg = load_cloud_config(root / "cloud" / "cloud_repos.yaml")
     assert cfg.default_repo == "slack_aibot"
-    assert {"slack_aibot", "traillog", "daylog", "videoplayer", "videodownloader"} <= set(cfg.repos.keys())
-    assert {"traillog", "traillog-dryrun"} <= set(cfg.workflows.keys())
+    assert {"slack_aibot", "traillog", "ondotrip", "daylog", "videoplayer", "videodownloader"} <= set(cfg.repos.keys())
+    assert {"traillog", "traillog-dryrun", "ondotrip", "ondotrip-preview", "ondotrip-status"} <= set(cfg.workflows.keys())
 
     # 클라우드 매니페스트 및 Actions 워크플로우 YAML 구문 검증
     manifest = yaml.safe_load((root / "cloud" / "slack_cloud_manifest.yaml").read_text(encoding="utf-8"))
     assert manifest["settings"]["socket_mode_enabled"] is False
     workflow = yaml.safe_load((root / ".github" / "workflows" / "slack_ai_worker.yml").read_text(encoding="utf-8"))
     assert "repository_dispatch" in workflow[True if True in workflow else "on"]
+
+    ondotrip_wf_path = root.parent / "Google_OndoTrip" / ".github" / "workflows" / "daily_post.yml"
+    if ondotrip_wf_path.is_file():
+        ondotrip_wf = yaml.safe_load(ondotrip_wf_path.read_text(encoding="utf-8"))
+        assert "workflow_dispatch" in ondotrip_wf[True if True in ondotrip_wf else "on"]
 
 
 def test_repo_toolchain_sandbox_and_modes(tmp_path: Path) -> None:

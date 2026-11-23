@@ -20,6 +20,10 @@ repos:
     repo: "kkubunge/Instagram_TrailLog"
     default_branch: "main"
     description: "두루누비 인스타그램 카드뉴스 자동화"
+  ondotrip:
+    repo: "kkubunge/Google_OndoTrip"
+    default_branch: "main"
+    description: "공공데이터 기반 구글 블로그(OndoTrip) 자동 포스팅"
   daylog:
     repo: "kkubunge/Daylog"
     default_branch: "master"
@@ -52,3 +56,33 @@ workflows:
       style: "auto"
       dry_run: true
     description: "TrailLog 카드뉴스 사전 검증 (실제 게시 안 함)"
+  ondotrip:
+    repo: "kkubunge/Google_OndoTrip"
+    workflow: "daily_post.yml"
+    ref: "main"
+    inputs:
+      count: "5"
+      publish: false
+      preview_only: false
+      status_only: false
+    description: "OndoTrip 일일 자동 포스팅 5건 (임시저장)"
+  ondotrip-preview:
+    repo: "kkubunge/Google_OndoTrip"
+    workflow: "daily_post.yml"
+    ref: "main"
+    inputs:
+      count: "1"
+      publish: false
+      preview_only: true
+      status_only: false
+    description: "OndoTrip HTML 미리보기 1건 생성 (업로드 없음)"
+  ondotrip-status:
+    repo: "kkubunge/Google_OndoTrip"
+    workflow: "daily_post.yml"
+    ref: "main"
+    inputs:
+      count: "1"
+      publish: false
+      preview_only: false
+      status_only: true
+    description: "OndoTrip 누적 현황(--status) 조회"

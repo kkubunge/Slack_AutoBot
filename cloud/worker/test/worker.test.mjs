@@ -214,3 +214,44 @@ test("Worker HTTP 핸들러: health, url_verification, retry 무시, app_mention
   assert.equal(calls[3].body.client_payload.action, "run");
   assert.equal(calls[3].body.client_payload.workflow, "traillog-dryrun");
 });
+
+test("Worker scheduled 핸들러: Cron 트리거 시 Google_OndoTrip 워크플로우 실행 및 Slack 알림", async () => {
+  const calls = [];
+  const fakeFetch = async (url, init) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    if (url.includes("/actions/workflows/daily_post.yml/dispatches")) {
+      return new Response(null, { status: 204 });
+    }
+    if (url.includes("slack.com/api/chat.postMessage")) {
+      return new Response(JSON.stringify({ ok: true, ts: "1700000999.1" }), { status: 200 });
+    }
+    return new Response("{}", { status: 200 });
+  };
+
+  const handler = createHandler({ fetch: fakeFetch });
+  const env = {
+    GITHUB_TOKEN: "ghp-test",
+    SLACK_BOT_TOKEN: "xoxb-test",
+    REPORT_CHANNEL_ID: "D_OWNER",
+    ONDOTRIP_REPO: "kkubunge/Google_OndoTrip",
+    ONDOTRIP_WORKFLOW: "daily_post.yml",
+    ONDOTRIP_REF: "main",
+    ONDOTRIP_DAILY_COUNT: "5",
+  };
+  const pending = [];
+  await handler.scheduled(
+    { cron: "0 1 * * *" },
+    env,
+    { waitUntil: (p) => pending.push(p) },
+  );
+  await Promise.all(pending);
+
+  assert.equal(calls.length, 2);
+  assert.match(calls[0].url, /kkubunge\/Google_OndoTrip\/actions\/workflows\/daily_post\.yml\/dispatches$/);
+  assert.equal(calls[0].body.ref, "main");
+  assert.equal(calls[0].body.inputs.count, "5");
+  assert.equal(calls[0].body.inputs.slack_channel_id, "D_OWNER");
+  assert.match(calls[1].url, /chat\.postMessage$/);
+  assert.equal(calls[1].body.channel, "D_OWNER");
+  assert.match(calls[1].body.text, /OndoTrip 일일 자동 실행 시작/);
+});
