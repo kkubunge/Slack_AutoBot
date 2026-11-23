@@ -69,6 +69,14 @@ test("parseCloudCommand: 도움말, 목록, 워크플로우 실행, [프로젝�
   assert.equal(devDefault.mode, "dev");
   assert.equal(devDefault.project, "traillog");
   assert.equal(devDefault.prompt, "캡션 문구 고쳐줘");
+
+  assert.equal(parseCloudCommand("!예약").kind, "schedule");
+  assert.equal(parseCloudCommand("!예약 목록").kind, "schedule");
+  assert.equal(parseCloudCommand("!상태").kind, "status");
+  assert.equal(parseCloudCommand("!작업").kind, "jobs");
+  const selectGuide = parseCloudCommand("!선택 ondotrip");
+  assert.equal(selectGuide.kind, "usage");
+  assert.match(selectGuide.message, /\[ondotrip\]/);
 });
 
 test("checkAuthorization: 허용 목록 미설정/불일치 차단 및 ALLOW_ALL_USERS 허용", () => {
@@ -254,4 +262,107 @@ test("Worker scheduled 핸들러: Cron 트리거 시 Google_OndoTrip 워크플�
   assert.match(calls[1].url, /chat\.postMessage$/);
   assert.equal(calls[1].body.channel, "D_OWNER");
   assert.match(calls[1].body.text, /OndoTrip 일일 자동 실행 시작/);
+});
+
+test("Worker !예약, !상태, !작업 명령 응답 검증", async () => {
+  const slackPosts = [];
+  const fakeFetch = async (url, init) => {
+    if (url.includes("/actions/runs")) {
+      return new Response(
+        JSON.stringify({
+          workflow_runs: [
+            {
+              name: "Daily Auto",
+              event: "workflow_dispatch",
+              status: "completed",
+              conclusion: "success",
+              run_number: 12,
+              created_at: "2026-11-23T01:00:00Z",
+              html_url: "https://github.com/kkubunge/Google_OndoTrip/actions/runs/1",
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }
+    if (url.includes("slack.com/api/chat.postMessage")) {
+      const body = JSON.parse(init.body);
+      slackPosts.push(body);
+      return new Response(JSON.stringify({ ok: true, ts: "1700001000.1" }), { status: 200 });
+    }
+    return new Response("{}", { status: 200 });
+  };
+
+  const secret = "worker_secret";
+  const nowSec = 1700000000;
+  const handler = createHandler({ fetch: fakeFetch, nowSec });
+  const env = {
+    SLACK_SIGNING_SECRET: secret,
+    SLACK_BOT_TOKEN: "xoxb-test",
+    GITHUB_TOKEN: "ghp-test",
+    ALLOWED_USER_IDS: "U_OWNER",
+    ALLOW_ALL_USERS: "false",
+    ONDOTRIP_REPO: "kkubunge/Google_OndoTrip",
+    ONDOTRIP_DAILY_COUNT: "5",
+  };
+  const pending = [];
+  const ctx = { waitUntil: (p) => pending.push(p) };
+
+  // 1. /slack/commands !예약 -> 즉시 클라우드 스케줄 현황 반환
+  const schedBody = new URLSearchParams({
+    user_id: "U_OWNER",
+    channel_id: "C_DEV",
+    text: "!예약",
+  }).toString();
+  const schedRes = await handler.fetch(
+    new Request("https://worker.dev/slack/commands", {
+      method: "POST",
+      headers: {
+        "X-Slack-Request-Timestamp": String(nowSec),
+        "X-Slack-Signature": signSlackBody(secret, String(nowSec), schedBody),
+      },
+      body: schedBody,
+    }),
+    env,
+    ctx,
+  );
+  const schedJson = await schedRes.json();
+  assert.equal(schedRes.status, 200);
+  assert.match(schedJson.text, /오전 10:00 KST/);
+  assert.match(schedJson.text, /Google_OndoTrip/);
+  assert.match(schedJson.text, /Instagram_TrailLog/);
+
+  // 2. /slack/events !상태 & !작업 -> GitHub runs 조회 후 Slack 전송
+  for (const cmdText of ["!상태", "!작업"]) {
+    const evtBody = JSON.stringify({
+      type: "event_callback",
+      event: {
+        type: "message",
+        channel_type: "im",
+        user: "U_OWNER",
+        channel: "D_OWNER",
+        ts: "1700000055.000100",
+        text: cmdText,
+      },
+    });
+    const res = await handler.fetch(
+      new Request("https://worker.dev/slack/events", {
+        method: "POST",
+        headers: {
+          "X-Slack-Request-Timestamp": String(nowSec),
+          "X-Slack-Signature": signSlackBody(secret, String(nowSec), evtBody),
+        },
+        body: evtBody,
+      }),
+      env,
+      ctx,
+    );
+    assert.equal(res.status, 200);
+  }
+  await Promise.all(pending.splice(0));
+
+  assert.equal(slackPosts.length, 2);
+  assert.match(slackPosts[0].text, /클라우드 게이트웨이 상태/);
+  assert.match(slackPosts[0].text, /2026-11-23 10:00 KST/);
+  assert.match(slackPosts[1].text, /GitHub Actions 작업 이력/);
 });

@@ -74,10 +74,13 @@ npx wrangler secret put ALLOWED_USER_IDS       # 본인 Slack User ID (쉼표로
 | `@Slack_AIbot !도움` | 클라우드 명령어 도움말 즉시 표시 | `!도움` |
 | `@Slack_AIbot !프로젝트` | 등록된 클라우드 GitHub 저장소·워크플로우 목록 보고 | `!프로젝트` |
 | `@Slack_AIbot !실행` | 원격 실행 가능한 GitHub Actions 목록 보고 | `!실행` |
-| `@Slack_AIbot !실행 <이름>` | 대상 저장소 워크플로우 원격 실행 | `!실행 traillog-dryrun` |
+| `@Slack_AIbot !실행 <이름>` | 대상 저장소 워크플로우 원격 실행 | `!실행 ondotrip-status`, `!실행 traillog-dryrun` |
+| `@Slack_AIbot !예약` | 클라우드 정기 자동 실행 예약 현황 조회 | `!예약` |
+| `@Slack_AIbot !상태` | 클라우드 게이트웨이 및 저장소별 최근 실행 상태 조회 | `!상태` |
+| `@Slack_AIbot !작업` | 최근 GitHub Actions 실행 이력 및 로그 링크 조회 | `!작업` |
 | `@Slack_AIbot !분석 [저장소] <지시>` | 읽기 전용(`plan`) 코드 분석 보고 (PR 생성 없음) | `!분석 [ondotrip] 블로그 글 생성 구조 설명해줘` |
 | `@Slack_AIbot [저장소] <지시>` | 코드 수정·테스트 후 브랜치 & PR 자동 생성(`dev`) | `[traillog] 캡션 문구 오타 점검하고 고쳐줘` |
-| `/ai <명령 또는 지시>` | 어느 채널에서든 슬래시 명령으로 즉시 실행 | `/ai [slack_aibot] README 오타 확인해줘` |
+| `/ai <명령 또는 지시>` | 어느 채널에서든 슬래시 명령으로 즉시 실행 | `/ai !예약`, `/ai [slack_aibot] README 오타 확인해줘` |
 
 ---
 
