@@ -44,8 +44,9 @@ _PROJECT_ALIASES: dict[str, str] = {
     "트레일로그": "traillog",
     "인스타": "traillog",
     "인스타그램": "traillog",
-    "autobot": "slack_aibot",
-    "오토봇": "slack_aibot",
+    "autobot": "slack_autobot",
+    "오토봇": "slack_autobot",
+    "slack_aibot": "slack_autobot",
 }
 
 _WORKFLOW_SUBKEY_ALIASES: dict[str, str] = {

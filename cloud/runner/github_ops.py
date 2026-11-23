@@ -21,7 +21,7 @@ def _default_github_request(
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "Slack-AIbot-Runner/1.0",
+        "User-Agent": "Slack-AutoBot-Runner/1.0",
     }
     data = None
     if payload is not None:
@@ -111,8 +111,8 @@ def commit_push_and_create_pr(
         return {"ok": True, "changed": False}
 
     branch_name = f"ai/slack-{job_id}"
-    _run_git(repo_dir, ["config", "user.name", "slack-aibot[bot]"])
-    _run_git(repo_dir, ["config", "user.email", "slack-aibot[bot]@users.noreply.github.com"])
+    _run_git(repo_dir, ["config", "user.name", "slack-autobot[bot]"])
+    _run_git(repo_dir, ["config", "user.email", "slack-autobot[bot]@users.noreply.github.com"])
 
     chk = _run_git(repo_dir, ["checkout", "-b", branch_name])
     if chk.returncode != 0:

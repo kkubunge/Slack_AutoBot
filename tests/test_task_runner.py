@@ -14,7 +14,7 @@ def test_task_runner_resolves_command_and_executes(tmp_path: Path) -> None:
         base_dir=tmp_path,
         config_path=tmp_path / "config.yaml",
         workspace_root=tmp_path,
-        default_project="slack_aibot",
+        default_project="slack_autobot",
         agy_cli_path=None,
         task_timeout_sec=30,
         ai=AIConfig(),
@@ -26,7 +26,7 @@ def test_task_runner_resolves_command_and_executes(tmp_path: Path) -> None:
     runner = TaskRunner(cfg)
     task = TaskConfig(
         key="echo-test",
-        project="slack_aibot",
+        project="slack_autobot",
         command=[sys.executable, "-c", "print('task-ok')"],
         description="테스트 작업",
     )

@@ -1,6 +1,6 @@
-# Slack_AIbot 클라우드 무인 버전(GitHub Actions + Gemini API) 저장소 및 워크플로우 설정
+# Slack_AutoBot 클라우드 무인 버전(GitHub Actions + Gemini API) 저장소 및 워크플로우 설정
 
-default_repo: "slack_aibot"
+default_repo: "slack_autobot"
 
 gemini:
   default_model: "gemini-2.5-pro"
@@ -12,8 +12,8 @@ gemini:
   max_turns: 15
 
 repos:
-  slack_aibot:
-    repo: "kkubunge/Slack_AIbot"
+  slack_autobot:
+    repo: "kkubunge/Slack_AutoBot"
     default_branch: "main"
     description: "AutoBot(오토봇) — 로컬·클라우드 AI 개발 컨트롤러"
   traillog:

@@ -1,7 +1,7 @@
-# Slack_AIbot 설정 파일
+# Slack_AutoBot 설정 파일
 
 workspace_root: "D:\\99_MyPJT\\GoogleAI_PJT"
-default_project: "slack_aibot"
+default_project: "slack_autobot"
 
 ai:
   default_model: "gemini-4-neon-high"
@@ -27,8 +27,8 @@ reporting:
   upload_long_logs: true
 
 projects:
-  slack_aibot:
-    path: "Slack_AIbot"
+  slack_autobot:
+    path: "Slack_AutoBot"
     description: "AutoBot(오토봇) — Slack 기반 AI 개발·제어 컨트롤러 (본 프로젝트)"
   ondotrip:
     path: "Google_OndoTrip"

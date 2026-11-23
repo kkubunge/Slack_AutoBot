@@ -88,9 +88,10 @@ test("parseCloudCommand: 한글 별칭(온도트립·구글블로그·트레일�
 
   assert.equal(parseCloudCommand("[구글블로그] 구조 분석").project, "ondotrip");
   assert.equal(parseCloudCommand("[구글 블로그] 구조 분석").project, "ondotrip");
-  assert.equal(parseCloudCommand("[AutoBot] README 확인").project, "slack_aibot");
-  assert.equal(parseCloudCommand("[오토봇] README 확인").project, "slack_aibot");
-  assert.equal(parseCloudCommand("[오토 봇] README 확인").project, "slack_aibot");
+  assert.equal(parseCloudCommand("[AutoBot] README 확인").project, "slack_autobot");
+  assert.equal(parseCloudCommand("[오토봇] README 확인").project, "slack_autobot");
+  assert.equal(parseCloudCommand("[오토 봇] README 확인").project, "slack_autobot");
+  assert.equal(parseCloudCommand("[slack_aibot] README 확인").project, "slack_autobot");
 
   const planTrail = parseCloudCommand("!분석 [트레일로그] 확인");
   assert.equal(planTrail.action, "ai");
@@ -163,7 +164,7 @@ test("Worker HTTP 핸들러: health, url_verification, retry 무시, app_mention
     if (url.includes("slack.com/api/chat.postMessage")) {
       return new Response(JSON.stringify({ ok: true, ts: "1700000100.123456" }), { status: 200 });
     }
-    if (url.includes("api.github.com/repos/kkubunge/Slack_AIbot/dispatches")) {
+    if (url.includes("api.github.com/repos/kkubunge/Slack_AutoBot/dispatches")) {
       return new Response(null, { status: 204 });
     }
     return new Response("{}", { status: 200 });
@@ -177,10 +178,10 @@ test("Worker HTTP 핸들러: health, url_verification, retry 무시, app_mention
     SLACK_BOT_TOKEN: "xoxb-test",
     GITHUB_TOKEN: "ghp-test",
     GITHUB_OWNER: "kkubunge",
-    GITHUB_REPO: "Slack_AIbot",
+    GITHUB_REPO: "Slack_AutoBot",
     ALLOWED_USER_IDS: "U_OWNER",
     ALLOW_ALL_USERS: "false",
-    DEFAULT_PROJECT: "slack_aibot",
+    DEFAULT_PROJECT: "slack_autobot",
   };
   const pending = [];
   const ctx = { waitUntil: (p) => pending.push(p) };

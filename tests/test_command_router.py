@@ -135,12 +135,12 @@ class FakeTaskRunner:
 
 
 def _build_env(tmp_path: Path, allowed_users: list[str] | None = None, allow_all: bool = False):
-    bot_dir = tmp_path / "Slack_AIbot"
+    bot_dir = tmp_path / "Slack_AutoBot"
     ondo_dir = tmp_path / "Google_OndoTrip"
     bot_dir.mkdir(parents=True)
     ondo_dir.mkdir(parents=True)
     (bot_dir / "config.yaml").write_text(
-        "workspace_root: .\nprojects:\n  slack_aibot:\n    path: Slack_AIbot\n",
+        "workspace_root: .\nprojects:\n  slack_autobot:\n    path: Slack_AutoBot\n",
         encoding="utf-8",
     )
 
@@ -148,7 +148,7 @@ def _build_env(tmp_path: Path, allowed_users: list[str] | None = None, allow_all
         base_dir=bot_dir,
         config_path=bot_dir / "config.yaml",
         workspace_root=tmp_path,
-        default_project="slack_aibot",
+        default_project="slack_autobot",
         agy_cli_path="agy.exe",
         task_timeout_sec=30,
         ai=AIConfig(),
@@ -158,7 +158,7 @@ def _build_env(tmp_path: Path, allowed_users: list[str] | None = None, allow_all
             allow_all_users=allow_all,
         ),
         projects={
-            "slack_aibot": ProjectConfig("slack_aibot", bot_dir, "Slack_AIbot", "Slack_AIbot 컨트롤러"),
+            "slack_autobot": ProjectConfig("slack_autobot", bot_dir, "Slack_AutoBot", "Slack_AutoBot 컨트롤러"),
             "ondotrip": ProjectConfig("ondotrip", ondo_dir, "Google_OndoTrip", "블로그 봇"),
         },
         tasks={
@@ -293,9 +293,9 @@ def test_korean_project_and_task_aliases(tmp_path: Path) -> None:
         assert fake_task.calls[-1] == ("ondotrip-status", cfg.projects["ondotrip"].path, "")
 
         router.handle_message(IncomingMessage("!선택 오토봇", "U_ALLOWED", "C1", "6", "6"), sink)
-        assert "slack_aibot" in sink.immediate[-1]
+        assert "slack_autobot" in sink.immediate[-1]
 
         router.handle_message(IncomingMessage("[AutoBot] 확인해줘", "U_ALLOWED", "C1", "7", "7"), sink)
-        assert fake_agy.calls[-1]["cwd"] == cfg.projects["slack_aibot"].path
+        assert fake_agy.calls[-1]["cwd"] == cfg.projects["slack_autobot"].path
     finally:
         store.close()

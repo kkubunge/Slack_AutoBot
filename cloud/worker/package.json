@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Slack_AIbot 클라우드 게이트웨이 (Cloudflare Workers)",
+  "description": "Slack_AutoBot 클라우드 게이트웨이 (Cloudflare Workers)",
   "scripts": {
     "test": "node --test test/worker.test.mjs",
     "deploy": "npx wrangler deploy"

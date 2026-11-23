@@ -18,8 +18,8 @@ from cloud.runner.tools import RepoToolchain
 def test_load_cloud_config_and_yaml_syntax() -> None:
     root = Path(__file__).resolve().parent.parent
     cfg = load_cloud_config(root / "cloud" / "cloud_repos.yaml")
-    assert cfg.default_repo == "slack_aibot"
-    assert set(cfg.repos.keys()) == {"slack_aibot", "traillog", "ondotrip"}
+    assert cfg.default_repo == "slack_autobot"
+    assert set(cfg.repos.keys()) == {"slack_autobot", "traillog", "ondotrip"}
     assert set(cfg.workflows.keys()) == {
         "traillog",
         "traillog-dryrun",
@@ -242,7 +242,7 @@ def test_trigger_remote_workflow_and_execute_cloud_payload(tmp_path: Path) -> No
         reporter=reporter,
         target_repo_dir=tmp_path,
         agent=FakeAgent(),
-        run_url="https://github.com/kkubunge/Slack_AIbot/actions/runs/1",
+        run_url="https://github.com/kkubunge/Slack_AutoBot/actions/runs/1",
     )
     assert rc_ai == 0
     assert slack_calls[-1][1]["ts"] == "100.2"
@@ -403,7 +403,7 @@ def test_execute_cloud_payload_supports_korean_aliases(monkeypatch: pytest.Monke
     ) == 0
     assert "kkubunge/Google_OndoTrip" in slack_msgs[-1]
 
-    for bot_alias in ("오토봇", "AutoBot"):
+    for bot_alias in ("오토봇", "AutoBot", "slack_aibot"):
         assert execute_cloud_payload(
             payload={"job_id": f"a-{bot_alias}", "action": "ai", "project": bot_alias, "mode": "plan", "prompt": "점검", "channel_id": "D1"},
             cloud_cfg=cfg,
@@ -411,4 +411,4 @@ def test_execute_cloud_payload_supports_korean_aliases(monkeypatch: pytest.Monke
             target_repo_dir=tmp_path,
             agent=FakeAgent(),
         ) == 0
-        assert "kkubunge/Slack_AIbot" in slack_msgs[-1]
+        assert "kkubunge/Slack_AutoBot" in slack_msgs[-1]

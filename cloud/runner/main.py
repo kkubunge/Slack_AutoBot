@@ -32,8 +32,9 @@ _PROJECT_ALIASES: dict[str, str] = {
     "트레일로그": "traillog",
     "인스타": "traillog",
     "인스타그램": "traillog",
-    "autobot": "slack_aibot",
-    "오토봇": "slack_aibot",
+    "autobot": "slack_autobot",
+    "오토봇": "slack_autobot",
+    "slack_aibot": "slack_autobot",
 }
 
 _WORKFLOW_SUBKEY_ALIASES: dict[str, str] = {
@@ -106,7 +107,7 @@ def load_payload(payload_file: str = "") -> dict[str, Any]:
     return {
         "job_id": uuid.uuid4().hex[:8],
         "action": os.environ.get("INPUT_ACTION", "list").strip().lower(),
-        "project": os.environ.get("INPUT_PROJECT", "slack_aibot").strip().lower(),
+        "project": os.environ.get("INPUT_PROJECT", "slack_autobot").strip().lower(),
         "mode": os.environ.get("INPUT_MODE", "plan").strip().lower(),
         "prompt": os.environ.get("INPUT_PROMPT", "").strip(),
         "workflow": os.environ.get("INPUT_WORKFLOW", "").strip().lower(),
@@ -134,7 +135,7 @@ def build_list_report(cloud_cfg: CloudAppConfig, list_target: str) -> str:
         lines.append(f"• `{key}` → `{wf.repo}` / `{wf.workflow}` — {wf.description}")
     lines.append(
         "\n_사용 예시: `!실행 인스타 드라이런` 또는 `[온도트립] 글 작성 로직 분석해줘`_\n"
-        "_별칭: 온도트립·구글블로그 → `ondotrip` | 트레일로그·인스타 → `traillog` | AutoBot·오토봇 → `slack_aibot`_"
+        "_별칭: 온도트립·구글블로그 → `ondotrip` | 트레일로그·인스타 → `traillog` | AutoBot·오토봇 → `slack_autobot`_"
     )
     return "\n".join(lines)
 

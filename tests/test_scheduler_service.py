@@ -14,7 +14,7 @@ def test_scheduler_triggers_once_per_day_and_respects_enabled(tmp_path: Path) ->
     triggered: list[int] = []
     try:
         s1 = store.add_schedule("09:30", "run", "ondotrip", "ondotrip", "C1", "U1")
-        s2 = store.add_schedule("09:30", "ai", "slack_aibot", "점검", "C1", "U1")
+        s2 = store.add_schedule("09:30", "ai", "slack_autobot", "점검", "C1", "U1")
         store.set_schedule_enabled(s2.schedule_id, False)
 
         def _on_trigger(rec: ScheduleRecord) -> None:

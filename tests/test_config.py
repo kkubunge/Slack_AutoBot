@@ -31,8 +31,8 @@ def test_resolve_safe_project_path_blocks_traversal_and_absolute(
 def test_load_config_from_project_root() -> None:
     base_dir = Path(__file__).resolve().parent.parent
     cfg = load_config(base_dir)
-    assert "slack_aibot" in cfg.projects
-    assert cfg.default_project == "slack_aibot"
+    assert "slack_autobot" in cfg.projects
+    assert cfg.default_project == "slack_autobot"
     assert "ondotrip" in cfg.projects
     assert "ondotrip-status" in cfg.tasks
     assert cfg.ai.default_mode in {"dev", "plan"}
@@ -47,7 +47,7 @@ def test_find_agy_executable_explicit(tmp_path: Path) -> None:
 def test_register_dynamic_project(tmp_path: Path) -> None:
     ws_root = tmp_path / "workspace"
     ws_root.mkdir()
-    bot_dir = ws_root / "Slack_AIbot"
+    bot_dir = ws_root / "Slack_AutoBot"
     bot_dir.mkdir()
 
     cfg_yaml = bot_dir / "config.yaml"
@@ -55,9 +55,9 @@ def test_register_dynamic_project(tmp_path: Path) -> None:
         yaml.safe_dump(
             {
                 "workspace_root": str(ws_root),
-                "default_project": "slack_aibot",
+                "default_project": "slack_autobot",
                 "projects": {
-                    "slack_aibot": {"path": "Slack_AIbot", "description": "기본 프로젝트"}
+                    "slack_autobot": {"path": "Slack_AutoBot", "description": "기본 프로젝트"}
                 },
             },
             allow_unicode=True,

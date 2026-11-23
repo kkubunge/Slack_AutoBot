@@ -51,7 +51,7 @@ def test_format_reports_and_help() -> None:
         tool_history=["`view_file`: `README.md`"],
         log_path="logs/job_1.log",
     )
-    rep = format_agy_report("job1", "slack_aibot", "gemini-4-neon-high", "dev", agy_res)
+    rep = format_agy_report("job1", "slack_autobot", "gemini-4-neon-high", "dev", agy_res)
     assert "AI 작업 완료" in rep
     assert "*완료*" in rep
     assert "12345678" in rep

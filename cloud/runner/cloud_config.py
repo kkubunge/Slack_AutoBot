@@ -120,7 +120,7 @@ def load_cloud_config(config_path: Path | None = None) -> CloudAppConfig:
             description=str(info.get("description", "")).strip(),
         )
 
-    default_repo = str(raw.get("default_repo", "slack_aibot")).strip().lower()
+    default_repo = str(raw.get("default_repo", "slack_autobot")).strip().lower()
     if default_repo not in repos and repos:
         default_repo = next(iter(repos.keys()))
 

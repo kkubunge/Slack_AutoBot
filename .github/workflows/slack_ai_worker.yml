@@ -1,4 +1,4 @@
-name: Slack_AIbot Cloud Worker
+name: Slack_AutoBot Cloud Worker
 
 on:
   repository_dispatch:
@@ -18,7 +18,7 @@ on:
       project:
         description: "대상 저장소 키 (cloud_repos.yaml 기준)"
         required: false
-        default: "slack_aibot"
+        default: "slack_autobot"
         type: string
       mode:
         description: "AI 실행 모드 (plan / dev)"
@@ -76,7 +76,18 @@ jobs:
           raw_payload = os.environ.get("PAYLOAD_JSON", "").strip()
           payload = json.loads(raw_payload) if raw_payload and raw_payload != "null" else {}
           action = (payload.get("action") or os.environ.get("INPUT_ACTION") or "list").strip().lower()
-          project = (payload.get("project") or os.environ.get("INPUT_PROJECT") or "slack_aibot").strip().lower()
+          raw_project = (payload.get("project") or os.environ.get("INPUT_PROJECT") or "slack_autobot").strip().lower()
+          aliases = {
+              "slack_aibot": "slack_autobot",
+              "autobot": "slack_autobot",
+              "오토봇": "slack_autobot",
+              "온도트립": "ondotrip",
+              "구글블로그": "ondotrip",
+              "트레일로그": "traillog",
+              "인스타": "traillog",
+              "인스타그램": "traillog",
+          }
+          project = aliases.get("".join(raw_project.split()), raw_project)
 
           cfg = yaml.safe_load(Path("_controller/cloud/cloud_repos.yaml").read_text(encoding="utf-8")) or {}
           repos = cfg.get("repos") or {}

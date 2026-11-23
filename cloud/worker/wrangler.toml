@@ -8,8 +8,8 @@ crons = ["0 1 * * *"]
 
 [vars]
 GITHUB_OWNER = "kkubunge"
-GITHUB_REPO = "Slack_AIbot"
-DEFAULT_PROJECT = "slack_aibot"
+GITHUB_REPO = "Slack_AutoBot"
+DEFAULT_PROJECT = "slack_autobot"
 ALLOW_ALL_USERS = "false"
 ONDOTRIP_REPO = "kkubunge/Google_OndoTrip"
 ONDOTRIP_WORKFLOW = "daily_post.yml"

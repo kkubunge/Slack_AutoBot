@@ -264,7 +264,7 @@ def load_config(base_dir: Path | None = None) -> AppConfig:
 
     default_project = (
         os.environ.get("DEFAULT_PROJECT", "").strip().lower()
-        or str(raw_yaml.get("default_project", "slack_aibot")).strip().lower()
+        or str(raw_yaml.get("default_project", "slack_autobot")).strip().lower()
     )
     if default_project not in projects and projects:
         default_project = next(iter(projects.keys()))

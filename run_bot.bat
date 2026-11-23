@@ -3,7 +3,7 @@ chcp 65001 > nul
 set PYTHONIOENCODING=utf-8
 cd /d "%~dp0"
 echo ============================================================
-echo   Slack_AIbot 시작
+echo   Slack_AutoBot (AutoBot) 시작
 echo ============================================================
 ".venv\Scripts\python.exe" -m src.main
 if %ERRORLEVEL% NEQ 0 (

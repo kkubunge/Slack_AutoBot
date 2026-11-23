@@ -1,6 +1,6 @@
-# AutoBot (오토봇) — Slack 기반 AI 개발·명령·보고 컨트롤러
+# Slack_AutoBot (AutoBot · 오토봇) — Slack 기반 AI 개발·명령·보고 컨트롤러
 
-GitHub 저장소: `https://github.com/kkubunge/Slack_AIbot.git`
+GitHub 저장소: `https://github.com/kkubunge/Slack_AutoBot.git`
 
 **Slack** 으로 원격 명령을 내리고, 실시간 진행 상황과 완료 결과를 보고받으며 AI 기반 코드 개발·분석·자동화 작업을 제어하는 통합 컨트롤러입니다.
 
@@ -9,10 +9,10 @@ GitHub 저장소: `https://github.com/kkubunge/Slack_AIbot.git`
 
 ---
 
-## 프로젝트 구조 (`Slack_AIbot/`)
+## 프로젝트 구조 (`Slack_AutoBot/`)
 
 ```text
-Slack_AIbot/
+Slack_AutoBot/
 ├── .github/workflows/
 │   └── slack_ai_worker.yml   # GitHub Actions 클라우드 AI 워커
 ├── cloud/                    # 로컬 PC 없는 클라우드 무인 모드 (방법 A)
@@ -27,7 +27,7 @@ Slack_AIbot/
 ├── slack_app_manifest.yaml   # Slack 앱 원클릭 생성용 매니페스트
 ├── requirements.txt          # Python 패키지 의존성 목록
 ├── README.md                 # 사용 및 설정 안내서
-├── run_bot.bat               # Slack_AIbot 실행 스크립트
+├── run_bot.bat               # Slack_AutoBot 실행 스크립트
 ├── run_local_test.bat        # Slack 연결 없이 터미널에서 테스트 (--local-cli)
 ├── run_tests.bat             # pytest 전체 테스트 실행
 ├── src/
@@ -70,7 +70,7 @@ Slack_AIbot/
 ## 주요 기능
 
 1. **Slack 기반 AI 원격 개발 (`agy.exe` 연동)**
-   - Slack 채널 멘션(`@Slack_AIbot`) 또는 DM에 자연어로 지시하면 선택한 프로젝트 폴더에서 AI가 코드를 분석·작성·수정·검증하고 결과를 보고합니다.
+   - Slack 채널 멘션(`@AutoBot`) 또는 DM에 자연어로 지시하면 선택한 프로젝트 폴더에서 AI가 코드를 분석·작성·수정·검증하고 결과를 보고합니다.
    - **실시간 진행 보고**: 도구 실행(`view_file`, `write_file`, `run_command` 등) 단계와 경과 시간을 Slack 메시지로 실시간 업데이트합니다.
    - **스레드 멀티턴 대화**: 작업 스레드에 답글을 달면 이전 `conversation_id`를 자동 복원해 이어서 지시할 수 있습니다.
    - **모드 분리**: `dev` 모드(코드 편집 및 명령 실행 허용)와 `plan` 모드(읽기 전용 분석/설계)를 지원합니다.
@@ -88,7 +88,7 @@ Slack_AIbot/
 
 1. **Slack 앱 생성**
    - [Slack API Apps 페이지](https://api.slack.com/apps)에서 **Create New App** → **From a manifest** 선택.
-   - 워크스페이스를 선택하고, 이 폴더의 [`slack_app_manifest.yaml`](slack_app_manifest.yaml) 내용을 그대로 붙여넣어 `Slack_AIbot` 앱을 생성합니다.
+   - 워크스페이스를 선택하고, 이 폴더의 [`slack_app_manifest.yaml`](slack_app_manifest.yaml) 내용을 그대로 붙여넣어 `AutoBot` 앱을 생성합니다.
 2. **App-Level Token 발급 (`SLACK_APP_TOKEN`)**
    - 앱 설정의 **Basic Information** → **App-Level Tokens** → **Generate Token and Scopes**.
    - 이름(예: `socket-token`) 입력 후 `connections:write` 스코프 추가 → 발급된 `xapp-...` 토큰을 복사합니다.
@@ -98,7 +98,7 @@ Slack_AIbot/
 4. **`.env` 설정**
    - `.env.example`을 복사하여 `.env` 파일을 만들고 토큰을 입력합니다.
    - 본인의 Slack User ID를 확인해 `ALLOWED_USER_IDS`에 입력합니다. (모르면 비워둔 채 봇에 메시지를 보내면 봇이 본인의 User ID를 안내해 줍니다.)
-   - 봇을 사용할 채널에 `/invite @Slack_AIbot`으로 초대합니다.
+   - 봇을 사용할 채널에 `/invite @AutoBot`으로 초대합니다.
 
 ---
 
@@ -109,11 +109,11 @@ Slack_AIbot/
 # 설정, agy.exe 탐지, 프로젝트 경로 및 DB 점검
 .\.venv\Scripts\python.exe -m src.main --check
 
-# 터미널에서 Slack_AIbot 명령과 AI 개발을 직접 테스트
+# 터미널에서 Slack_AutoBot 명령과 AI 개발을 직접 테스트
 run_local_test.bat
 ```
 
-### 2. Slack_AIbot 실행
+### 2. Slack_AutoBot 실행
 ```powershell
 run_bot.bat
 ```
@@ -127,7 +127,7 @@ run_bot.bat
 - **프로젝트/실행 한글 별칭 지원**: 아래 모든 명령(`!실행`, `!선택`, `[저장소]`)에서 영문 키 대신 한글 이름도 사용할 수 있습니다.
   - **`ondotrip`** ↔ `온도트립`, `구글블로그` (`구글 블로그`) | 예: `!실행 온도트립`, `!실행 구글블로그 상태`, `[온도트립] ...`
   - **`traillog`** ↔ `트레일로그`, `인스타`, `인스타그램` | 예: `!실행 인스타`, `!실행 인스타 드라이런`, `[트레일로그] ...`
-  - **`slack_aibot`** ↔ `AutoBot`, `오토봇` | 예: `[오토봇] ...`, `[AutoBot] ...`, `!선택 오토봇`
+  - **`slack_autobot`** ↔ `AutoBot`, `오토봇` (`slack_aibot` 호환) | 예: `[오토봇] ...`, `[AutoBot] ...`, `!선택 오토봇`
 
 ### 1) 클라우드 무인 모드 명령어 (`Cloudflare Workers + GitHub Actions`, 현재 가동 중)
 

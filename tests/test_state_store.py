@@ -11,12 +11,12 @@ def test_thread_sessions_and_channel_settings(tmp_path: Path) -> None:
     store = StateStore(tmp_path / "state.db")
     try:
         assert store.get_thread_session("C1", "100.1") is None
-        saved = store.upsert_thread_session("C1", "100.1", "conv-abc", "slack_aibot", "gemini-4-neon-high", "dev")
+        saved = store.upsert_thread_session("C1", "100.1", "conv-abc", "slack_autobot", "gemini-4-neon-high", "dev")
         assert saved.conversation_id == "conv-abc"
 
         loaded = store.get_thread_session("C1", "100.1")
         assert loaded is not None
-        assert loaded.project_key == "slack_aibot"
+        assert loaded.project_key == "slack_autobot"
 
         store.upsert_thread_session("C1", "100.1", "conv-xyz", "ondotrip", "gemini-3.8-flash-high", "plan")
         updated = store.get_thread_session("C1", "100.1")
@@ -36,7 +36,7 @@ def test_thread_sessions_and_channel_settings(tmp_path: Path) -> None:
 def test_jobs_schedules_and_dynamic_projects(tmp_path: Path) -> None:
     store = StateStore(tmp_path / "state.db")
     try:
-        store.create_job("j1", "ai", "slack_aibot", "테스트 프롬프트", "U1", "C1", "t1", "logs/j1.log")
+        store.create_job("j1", "ai", "slack_autobot", "테스트 프롬프트", "U1", "C1", "t1", "logs/j1.log")
         store.finish_job("j1", "success", "완료됨", 3.2, conversation_id="conv-1")
         job = store.get_job("j1")
         assert job is not None

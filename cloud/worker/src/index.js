@@ -37,7 +37,7 @@ async function callSlackApi(fetchFn, botToken, method, body) {
 
 async function triggerGitHubDispatch(fetchFn, env, clientPayload) {
   const owner = env.GITHUB_OWNER || "kkubunge";
-  const repo = env.GITHUB_REPO || "Slack_AIbot";
+  const repo = env.GITHUB_REPO || "Slack_AutoBot";
   const token = env.GITHUB_TOKEN || "";
   if (!token) {
     return { ok: false, error: "GITHUB_TOKEN 시크릿이 설정되지 않았습니다." };
@@ -50,7 +50,7 @@ async function triggerGitHubDispatch(fetchFn, env, clientPayload) {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "Content-Type": "application/json; charset=utf-8",
-      "User-Agent": "Slack-AIbot-Gateway/1.0",
+      "User-Agent": "Slack-AutoBot-Gateway/1.0",
       "X-GitHub-Api-Version": "2022-11-28",
     },
     body: JSON.stringify({
@@ -82,7 +82,7 @@ async function triggerWorkflowDispatch(
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "Content-Type": "application/json; charset=utf-8",
-      "User-Agent": "Slack-AIbot-Gateway/1.0",
+      "User-Agent": "Slack-AutoBot-Gateway/1.0",
       "X-GitHub-Api-Version": "2022-11-28",
     },
     body: JSON.stringify({ ref, inputs }),
@@ -144,7 +144,7 @@ async function fetchRecentWorkflowRuns(fetchFn, env, perRepo = 2) {
   const targets = [
     { key: "ondotrip", repo: env.ONDOTRIP_REPO || "kkubunge/Google_OndoTrip" },
     { key: "traillog", repo: "kkubunge/Instagram_TrailLog" },
-    { key: "slack_aibot", repo: `${owner}/${env.GITHUB_REPO || "Slack_AIbot"}` },
+    { key: "slack_autobot", repo: `${owner}/${env.GITHUB_REPO || "Slack_AutoBot"}` },
   ];
 
   const items = await Promise.all(
@@ -157,7 +157,7 @@ async function fetchRecentWorkflowRuns(fetchFn, env, perRepo = 2) {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: "application/vnd.github+json",
-              "User-Agent": "Slack-AIbot-Gateway/1.0",
+              "User-Agent": "Slack-AutoBot-Gateway/1.0",
               "X-GitHub-Api-Version": "2022-11-28",
             },
           },
@@ -188,7 +188,7 @@ async function buildCloudStatusText(fetchFn, env) {
   const lines = [
     "*AutoBot(오토봇) 클라우드 게이트웨이 상태*",
     `• 게이트웨이: \`온라인\` (Cloudflare Workers)`,
-    `• 기본 저장소: \`${env.DEFAULT_PROJECT || "slack_aibot"}\` | 일일 Cron: \`0 1 * * *\` (매일 10:00 KST \`ondotrip\`)`,
+    `• 기본 저장소: \`${env.DEFAULT_PROJECT || "slack_autobot"}\` | 일일 Cron: \`0 1 * * *\` (매일 10:00 KST \`ondotrip\`)`,
     "",
     "*저장소별 최근 실행 상태*",
   ];
@@ -390,7 +390,7 @@ export function createHandler(deps = {}) {
             return;
           }
 
-          const parsed = parseCloudCommand(text, env.DEFAULT_PROJECT || "slack_aibot");
+          const parsed = parseCloudCommand(text, env.DEFAULT_PROJECT || "slack_autobot");
           if (parsed.kind === "help" || parsed.kind === "usage" || parsed.kind === "schedule") {
             const replyText =
               parsed.kind === "help"
@@ -455,7 +455,7 @@ export function createHandler(deps = {}) {
           return jsonResponse({ response_type: "ephemeral", text: auth.message });
         }
 
-        const parsed = parseCloudCommand(text, env.DEFAULT_PROJECT || "slack_aibot");
+        const parsed = parseCloudCommand(text, env.DEFAULT_PROJECT || "slack_autobot");
         if (parsed.kind === "help") {
           return jsonResponse({ response_type: "ephemeral", text: buildCloudHelpText() });
         }
