@@ -2,7 +2,7 @@
 
 GitHub 저장소: `https://github.com/kkubunge/Slack_AIbot.git`
 
-Windows 작업 스케줄러 대신 **Slack** 으로 원격 명령을 내리고, 실시간 진행 상황과 완료 결과를 보고받으며 AI 기반 코드 개발·분석·자동화 작업을 제어하는 통합 컨트롤러입니다.
+**Slack** 으로 원격 명령을 내리고, 실시간 진행 상황과 완료 결과를 보고받으며 AI 기반 코드 개발·분석·자동화 작업을 제어하는 통합 컨트롤러입니다.
 
 - **로컬 PC 모드 (`src/`)**: Socket Mode로 로컬 PC의 `agy.EXE` 및 로컬 프로젝트(`.venv`) 제어
 - **클라우드 무인 모드 (`cloud/`, `.github/workflows/`)**: **로컬 PC 전원 없이** `Slack ↔ Cloudflare Workers ↔ GitHub Actions + Gemini API`로 24시간 AI 코드 개발·PR 자동 생성·원격 워크플로우 실행 및 보고 ([클라우드 배포 가이드](cloud/README_CLOUD.md))
@@ -30,15 +30,13 @@ Slack_AIbot/
 ├── run_bot.bat               # Slack_AIbot 실행 스크립트
 ├── run_local_test.bat        # Slack 연결 없이 터미널에서 테스트 (--local-cli)
 ├── run_tests.bat             # pytest 전체 테스트 실행
-├── register_autostart.bat    # Windows 로그인 시 자동 실행 등록 (선택)
-├── unregister_autostart.bat  # Windows 로그인 자동 실행 해제
 ├── src/
 │   ├── __init__.py
 │   ├── main.py               # CLI 진입점 (봇 실행 / --check / --local-cli)
 │   ├── config.py             # 설정 로드, 경로 탈출 검증, agy.exe 탐지
 │   ├── state_store.py        # SQLite(data/state.db) 세션·설정·이력·예약 저장소
 │   ├── agy_runner.py         # Antigravity CLI(stream-json) 스트리밍 실행기
-│   ├── task_runner.py        # 프리셋 프로젝트 작업 실행 및 Windows 스케줄러 조회
+│   ├── task_runner.py        # 프리셋 프로젝트 작업 실행기
 │   ├── scheduler_service.py  # 내장 일일 예약 스케줄러 서비스
 │   ├── formatter.py          # Markdown→Slack mrkdwn 변환, 장문 분할, 보고서 포맷
 │   ├── command_router.py     # 권한 제어, 명령 라우팅, 프로젝트별 락 관리
@@ -76,9 +74,9 @@ Slack_AIbot/
    - **실시간 진행 보고**: 도구 실행(`view_file`, `write_file`, `run_command` 등) 단계와 경과 시간을 Slack 메시지로 실시간 업데이트합니다.
    - **스레드 멀티턴 대화**: 작업 스레드에 답글을 달면 이전 `conversation_id`를 자동 복원해 이어서 지시할 수 있습니다.
    - **모드 분리**: `dev` 모드(코드 편집 및 명령 실행 허용)와 `plan` 모드(읽기 전용 분석/설계)를 지원합니다.
-2. **기존 스케줄러 작업 온디맨드 실행 및 내장 예약 대체**
+2. **온디맨드 작업 실행 및 예약 관리**
    - `!실행 ondotrip`, `!실행 ondotrip-status`, `!실행 traillog`, `!실행 traillog-check` 등으로 `Google_OndoTrip`과 `Instagram_TrailLog`를 언제든 Slack에서 실행하고 로그를 보고받습니다.
-   - `!예약 추가 10:00 run ondotrip` 형태로 Windows 작업 스케줄러 대신 `Slack_AIbot` 내부에서 일일 예약을 관리할 수 있습니다.
+   - 클라우드 모드에서는 Cloudflare Workers Cron 및 GitHub Actions Cron으로 무인 자동 실행되며, 로컬 PC 모드에서는 `!예약 추가 10:00 run ondotrip` 형태로 내부 일일 예약을 관리할 수 있습니다.
 3. **안전장치 및 권한 제어**
    - `.env`의 `ALLOWED_USER_IDS` 화이트리스트에 등록된 사용자만 명령을 실행할 수 있습니다.
    - 같은 프로젝트에 대한 동시 AI 작업은 프로젝트별 락으로 순차 보호됩니다.
@@ -108,7 +106,7 @@ Slack_AIbot/
 
 ### 1. 환경 점검 및 로컬 테스트 (Slack 토큰 없이 가능)
 ```powershell
-# 설정, agy.exe 탐지, 프로젝트 경로, DB 및 기존 Windows 스케줄러 점검
+# 설정, agy.exe 탐지, 프로젝트 경로 및 DB 점검
 .\.venv\Scripts\python.exe -m src.main --check
 
 # 터미널에서 Slack_AIbot 명령과 AI 개발을 직접 테스트
@@ -119,7 +117,6 @@ run_local_test.bat
 ```powershell
 run_bot.bat
 ```
-- PC 로그인 시 자동으로 봇을 백그라운드 실행 등록하려면 `register_autostart.bat`을 실행하세요. (해제는 `unregister_autostart.bat`)
 
 ---
 
@@ -154,23 +151,8 @@ run_bot.bat
 | `!모델 [모델명]` | `!model` | 로컬 `agy.EXE` 사용 모델 목록 조회 또는 변경 | `!모델 gemini-3.8-flash-high` |
 | `!모드 [dev\|plan]` | `!mode` | 채널 기본 AI 모드 조회 또는 변경 | `!모드 plan` |
 | `!예약 추가 <HH:MM> <run\|ai> <대상>` | `!schedule add` | 로컬 봇 내장 일일 예약 등록 (`삭제\|켜기\|끄기 <ID>`) | `!예약 추가 10:00 run ondotrip` |
-| `!스케줄러` | `!winscheduler` | 로컬 Windows 작업 스케줄러 현황 조회 | `!스케줄러` |
 | `!중단 <작업ID\|all>` | `!stop` | 로컬에서 실행 중인 AI/프리셋 작업 즉시 중단 | `!중단 all` |
 | `!로그 <작업ID>` | `!log` | 특정 로컬 작업의 마지막 로그 조회 | `!로그 a1b2c3d4` |
-
----
-
-## 기존 Windows 작업 스케줄러에서 Slack / 클라우드 방식으로 전환하기
-
-`Slack_AIbot`은 안전을 위해 기존 Windows 작업 스케줄러(`OndoTrip_Daily_Auto` 등)를 자동으로 삭제하거나 비활성화하지 않습니다.
-
-1. 먼저 Slack에서 `!스케줄러` 명령으로 현재 등록된 Windows 작업을 확인합니다.
-2. 클라우드 스케줄러(Cloudflare Workers Cron, 매일 오전 10:00 `Google_OndoTrip` 실행) 또는 `Slack_AIbot` 내장 예약(`!예약 추가 10:00 run ondotrip`)으로 전환합니다.
-3. 이중 실행을 막으려면 아래 명령으로 기존 Windows 작업을 비활성화하세요(미사용 작업 포함).
-   ```powershell
-   schtasks /Change /TN "OndoTrip_Daily_Auto" /DISABLE
-   schtasks /Change /TN "NaverMap_MealAndBrew_Daily_0930" /DISABLE
-   ```
 
 ---
 

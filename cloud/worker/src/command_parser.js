@@ -128,16 +128,6 @@ export function parseCloudCommand(rawText, defaultProject = "slack_aibot") {
       };
     }
 
-    if (cmd === "!스케줄러" || cmd === "!winscheduler") {
-      return {
-        kind: "usage",
-        message:
-          ":information_source: 현재는 로컬 PC가 아닌 클라우드 무인 모드로 동작 중입니다.\n" +
-          "• 클라우드 정기 예약 현황은 `!예약`으로 확인하세요.\n" +
-          "• 기존 PC Windows 작업 스케줄러 조회(`!스케줄러`)는 로컬 PC 모드(`run_bot.bat`) 전용입니다.",
-      };
-    }
-
     if (cmd === "!모델" || cmd === "!model" || cmd === "!모드" || cmd === "!mode" || cmd === "!새프로젝트" || cmd === "!new") {
       return {
         kind: "usage",

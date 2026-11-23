@@ -29,7 +29,7 @@ from src.formatter import (
     split_slack_message,
 )
 from src.state_store import ScheduleRecord, StateStore
-from src.task_runner import TaskResult, TaskRunner, query_windows_schedulers
+from src.task_runner import TaskResult, TaskRunner
 
 logger = logging.getLogger(__name__)
 
@@ -292,10 +292,6 @@ class CommandRouter:
 
         if cmd in {"!예약", "!schedule"}:
             self._cmd_schedule(rest, msg, sink)
-            return
-
-        if cmd in {"!스케줄러", "!winscheduler"}:
-            sink.send_immediate(query_windows_schedulers())
             return
 
         sink.send_immediate(

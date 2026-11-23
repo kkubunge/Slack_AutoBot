@@ -1,9 +1,7 @@
-"""사전 등록된 로컬 프로젝트 작업 실행기 및 Windows 작업 스케줄러 조회 유틸리티."""
+"""사전 등록된 로컬 프로젝트 작업 실행기."""
 
 from __future__ import annotations
 
-import csv
-import io
 import os
 import shlex
 import subprocess
@@ -240,53 +238,3 @@ class TaskRunner:
             command_display=cmd_display,
             error="" if rc == 0 else f"종료 코드 {rc}",
         )
-
-
-def _decode_windows_output(raw: bytes) -> str:
-    """Windows 콘솔 명령 바이트 출력을 UTF-8 우선, 실패 시 CP949로 안전하게 디코딩한다."""
-    if not raw:
-        return ""
-    try:
-        return raw.decode("utf-8")
-    except UnicodeDecodeError:
-        return raw.decode("cp949", errors="replace")
-
-
-def query_windows_schedulers(keywords: tuple[str, ...] = ("OndoTrip", "NaverMap", "TrailLog", "GoogleAI", "Slack_AIbot", "Slack")) -> str:
-    """기존 Windows 작업 스케줄러 등록 상태를 읽기 전용으로 조회해 한국어로 요약한다."""
-    if os.name != "nt":
-        return "Windows 환경이 아니어서 작업 스케줄러를 조회할 수 없습니다."
-
-    try:
-        proc = subprocess.run(
-            ["schtasks", "/Query", "/FO", "CSV", "/NH"],
-            capture_output=True,
-            text=False,
-            timeout=10,
-            check=False,
-        )
-    except Exception as exc:
-        return f"Windows 작업 스케줄러 조회 실패: {exc}"
-
-    if proc.returncode != 0:
-        return f"Windows 작업 스케줄러 조회 오류 (코드 {proc.returncode})"
-
-    stdout_text = _decode_windows_output(proc.stdout)
-    matched: list[tuple[str, str, str]] = []
-    reader = csv.reader(io.StringIO(stdout_text))
-    lowered_kw = tuple(k.lower() for k in keywords)
-    for row in reader:
-        if len(row) < 3:
-            continue
-        task_name, next_run, status = row[0].strip(), row[1].strip(), row[2].strip()
-        if any(k in task_name.lower() for k in lowered_kw):
-            matched.append((task_name, next_run, status))
-
-    if not matched:
-        return "GoogleAI_PJT 관련으로 등록된 Windows 작업 스케줄러 항목이 없습니다."
-
-    lines = ["*기존 Windows 작업 스케줄러 현황 (읽기 전용 조회)*"]
-    for task_name, next_run, status in matched:
-        lines.append(f"• `{task_name}` — 상태: `{status}` | 다음 실행: {next_run}")
-    lines.append("_참고: 기존 스케줄러는 안전을 위해 자동 삭제하지 않았습니다. 비활성화하려면 각 프로젝트의 `unregister_scheduler.bat` 또는 `schtasks /Change /TN \"작업명\" /DISABLE`을 사용하세요._")
-    return "\n".join(lines)

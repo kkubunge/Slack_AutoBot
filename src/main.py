@@ -11,7 +11,6 @@ from pathlib import Path
 from src.command_router import CommandRouter, IncomingMessage, ReplySink
 from src.config import AppConfig, load_config
 from src.state_store import StateStore
-from src.task_runner import query_windows_schedulers
 
 
 class LocalConsoleReplySink(ReplySink):
@@ -72,7 +71,7 @@ def _mask_token(token: str) -> str:
 
 
 def run_check(config: AppConfig) -> int:
-    """로컬 환경, 설정 파일, agy CLI, 프로젝트 경로, DB 및 스케줄러 상태를 점검한다."""
+    """로컬 환경, 설정 파일, agy CLI, 프로젝트 경로 및 DB 상태를 점검한다."""
     print("============================================================")
     print("  Slack_AIbot 환경 점검")
     print("============================================================")
@@ -107,9 +106,6 @@ def run_check(config: AppConfig) -> int:
     schedules = store.list_schedules()
     store.close()
     print(f"\n[SQLite 상태 저장소]: 정상 초기화 ({db_path}, 등록 예약 {len(schedules)}건)")
-
-    print("\n[Windows 작업 스케줄러 현황]")
-    print(query_windows_schedulers())
     print("============================================================")
     return 0
 
@@ -196,7 +192,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="설정, agy CLI, 프로젝트 경로, DB 및 스케줄러 상태를 점검합니다.",
+        help="설정, agy CLI, 프로젝트 경로 및 DB 상태를 점검합니다.",
     )
     parser.add_argument(
         "--local-cli",
