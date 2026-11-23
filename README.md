@@ -77,8 +77,8 @@ Slack_AIbot/
    - **스레드 멀티턴 대화**: 작업 스레드에 답글을 달면 이전 `conversation_id`를 자동 복원해 이어서 지시할 수 있습니다.
    - **모드 분리**: `dev` 모드(코드 편집 및 명령 실행 허용)와 `plan` 모드(읽기 전용 분석/설계)를 지원합니다.
 2. **기존 스케줄러 작업 온디맨드 실행 및 내장 예약 대체**
-   - `!실행 ondotrip`, `!실행 mealandbrew`, `!실행 camping`, `!실행 traillog` 등으로 기존 프로젝트를 언제든 Slack에서 실행하고 로그를 보고받습니다.
-   - `!예약 추가 09:30 run mealandbrew` 형태로 Windows 작업 스케줄러 대신 `Slack_AIbot` 내부에서 일일 예약을 관리할 수 있습니다.
+   - `!실행 ondotrip`, `!실행 ondotrip-status`, `!실행 traillog`, `!실행 traillog-check` 등으로 `Google_OndoTrip`과 `Instagram_TrailLog`를 언제든 Slack에서 실행하고 로그를 보고받습니다.
+   - `!예약 추가 10:00 run ondotrip` 형태로 Windows 작업 스케줄러 대신 `Slack_AIbot` 내부에서 일일 예약을 관리할 수 있습니다.
 3. **안전장치 및 권한 제어**
    - `.env`의 `ALLOWED_USER_IDS` 화이트리스트에 등록된 사용자만 명령을 실행할 수 있습니다.
    - 같은 프로젝트에 대한 동시 AI 작업은 프로젝트별 락으로 순차 보호됩니다.
@@ -138,7 +138,7 @@ run_bot.bat
 | `!모드 [dev\|plan]` | `!mode` | 채널 기본 AI 모드 조회 또는 변경 | `!모드 plan` |
 | `!실행 [작업명] [인자]` | `!run` | 등록된 프리셋 목록 조회 또는 작업 실행 | `!실행 ondotrip-status` |
 | `!예약 목록` | `!schedule list` | 내장 일일 예약 목록 조회 | `!예약 목록` |
-| `!예약 추가 <HH:MM> <run\|ai> <대상>` | `!schedule add` | 매일 지정 시각 자동 실행 예약 | `!예약 추가 09:30 run mealandbrew` |
+| `!예약 추가 <HH:MM> <run\|ai> <대상>` | `!schedule add` | 매일 지정 시각 자동 실행 예약 | `!예약 추가 10:00 run ondotrip` |
 | `!예약 삭제\|켜기\|끄기 <ID>` | `!schedule del\|enable\|disable` | 예약 삭제 및 활성화 제어 | `!예약 끄기 1` |
 | `!스케줄러` | `!winscheduler` | 기존 Windows 작업 스케줄러 현황 조회 | `!스케줄러` |
 | `!상태` | `!status` | 봇 가동 시간, 설정, `agy` 및 실행 작업 조회 | `!상태` |
@@ -149,13 +149,13 @@ run_bot.bat
 
 ---
 
-## 기존 Windows 작업 스케줄러에서 Slack 방식으로 전환하기
+## 기존 Windows 작업 스케줄러에서 Slack / 클라우드 방식으로 전환하기
 
-`Slack_AIbot`은 안전을 위해 기존 Windows 작업 스케줄러(`OndoTrip_Daily_Auto`, `NaverMap_MealAndBrew_Daily_0930` 등)를 자동으로 삭제하거나 비활성화하지 않습니다.
+`Slack_AIbot`은 안전을 위해 기존 Windows 작업 스케줄러(`OndoTrip_Daily_Auto` 등)를 자동으로 삭제하거나 비활성화하지 않습니다.
 
 1. 먼저 Slack에서 `!스케줄러` 명령으로 현재 등록된 Windows 작업을 확인합니다.
-2. 동일한 작업을 `Slack_AIbot` 내장 예약(`!예약 추가 09:30 run mealandbrew`, `!예약 추가 10:00 run ondotrip`)으로 등록하거나, 필요할 때마다 `!실행 mealandbrew`로 수동 지시하도록 전환합니다.
-3. 이중 실행을 막으려면 각 프로젝트의 `unregister_scheduler.bat`을 실행하거나 아래 명령으로 기존 Windows 작업을 비활성화하세요.
+2. 클라우드 스케줄러(Cloudflare Workers Cron, 매일 오전 10:00 `Google_OndoTrip` 실행) 또는 `Slack_AIbot` 내장 예약(`!예약 추가 10:00 run ondotrip`)으로 전환합니다.
+3. 이중 실행을 막으려면 아래 명령으로 기존 Windows 작업을 비활성화하세요(미사용 작업 포함).
    ```powershell
    schtasks /Change /TN "OndoTrip_Daily_Auto" /DISABLE
    schtasks /Change /TN "NaverMap_MealAndBrew_Daily_0930" /DISABLE

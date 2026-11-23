@@ -24,18 +24,6 @@ repos:
     repo: "kkubunge/Google_OndoTrip"
     default_branch: "main"
     description: "공공데이터 기반 구글 블로그(OndoTrip) 자동 포스팅"
-  daylog:
-    repo: "kkubunge/Daylog"
-    default_branch: "master"
-    description: "Daylog Android 앱"
-  videoplayer:
-    repo: "kkubunge/VideoPlayer"
-    default_branch: "master"
-    description: "VideoPlayer Android 앱"
-  videodownloader:
-    repo: "kkubunge/AppVideoDownloader_re2"
-    default_branch: "master"
-    description: "VideoDownloader Android 앱"
 
 workflows:
   traillog:

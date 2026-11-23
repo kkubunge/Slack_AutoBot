@@ -196,7 +196,7 @@ export function buildCloudHelpText() {
     "• `@Slack_AIbot [저장소] 개발 지시` → 해당 GitHub 저장소에서 AI가 코드 수정 후 브랜치·PR 자동 생성\n" +
     "• `!개발 [저장소] 지시` / `!dev [저장소] 지시` → `dev` 모드(코드 수정·검증·PR)\n" +
     "• `!분석 [저장소] 지시` / `!plan [저장소] 지시` → `plan` 모드(읽기 전용 코드 분석·계획)\n" +
-    "• 슬래시 명령: `/ai [daylog] 앱 설정 화면 구조 분석해줘`\n\n" +
+    "• 슬래시 명령: `/ai [ondotrip] 글 작성 로직 구조 분석해줘`\n\n" +
     "*2. 원격 저장소 및 워크플로우 조회/실행*\n" +
     "• `!프로젝트` / `!projects` → 등록된 GitHub 저장소 목록 조회\n" +
     "• `!실행` / `!run` → 원격 실행 가능한 GitHub Actions 워크플로우 목록 조회\n" +

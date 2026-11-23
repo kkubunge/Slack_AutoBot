@@ -58,11 +58,11 @@ test("parseCloudCommand: 도움말, 목록, 워크플로우 실행, [프로젝�
   assert.equal(runWf.workflow, "traillog");
   assert.equal(runWf.extraArgs, "--dry-run");
 
-  const planCmd = parseCloudCommand("!분석 [daylog] 앱 구조 파악해줘");
+  const planCmd = parseCloudCommand("!분석 [ondotrip] 글 생성 구조 파악해줘");
   assert.equal(planCmd.action, "ai");
   assert.equal(planCmd.mode, "plan");
-  assert.equal(planCmd.project, "daylog");
-  assert.equal(planCmd.prompt, "앱 구조 파악해줘");
+  assert.equal(planCmd.project, "ondotrip");
+  assert.equal(planCmd.prompt, "글 생성 구조 파악해줘");
 
   const devDefault = parseCloudCommand("<@U999> [traillog] 캡션 문구 고쳐줘");
   assert.equal(devDefault.action, "ai");
@@ -165,7 +165,7 @@ test("Worker HTTP 핸들러: health, url_verification, retry 무시, app_mention
       user: "U_OWNER",
       channel: "C_DEV",
       ts: "1700000050.000100",
-      text: "<@U_BOT> [daylog] 다크모드 확인해줘",
+      text: "<@U_BOT> [ondotrip] 글 요약 로직 확인해줘",
     },
   });
   const eventReq = new Request("https://worker.dev/slack/events", {
@@ -185,7 +185,7 @@ test("Worker HTTP 핸들러: health, url_verification, retry 무시, app_mention
   assert.match(calls[1].url, /dispatches$/);
   assert.equal(calls[1].body.event_type, "slack_ai_command");
   assert.ok(Object.keys(calls[1].body.client_payload).length <= 10);
-  assert.equal(calls[1].body.client_payload.project, "daylog");
+  assert.equal(calls[1].body.client_payload.project, "ondotrip");
   assert.equal(calls[1].body.client_payload.slack.status_ts, "1700000100.123456");
 
   // 5. /slack/commands (/ai)

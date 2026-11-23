@@ -229,7 +229,7 @@ def format_help_message() -> str:
         "• `!실행 <작업명> [추가인자]` / `!run <작업명> [추가인자]` → 프로젝트 작업 실행 및 결과 보고\n"
         "• `!예약 목록` / `!schedule list` → 내장 일일 예약 목록 조회\n"
         "• `!예약 추가 <HH:MM> <run|ai> <대상> [내용]` → 매일 지정 시각에 자동 실행 예약\n"
-        "  예) `!예약 추가 09:30 run mealandbrew` / `!예약 추가 10:00 ai ondotrip 오늘자 로그 점검해줘`\n"
+        "  예) `!예약 추가 10:00 run ondotrip` / `!예약 추가 09:00 ai traillog 오늘자 게시 이력 점검해줘`\n"
         "• `!예약 삭제 <ID>` / `!예약 켜기 <ID>` / `!예약 끄기 <ID>`\n"
         "• `!스케줄러` / `!winscheduler` → 기존 Windows 작업 스케줄러 현황 조회\n"
         "\n"

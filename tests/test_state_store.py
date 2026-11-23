@@ -24,10 +24,10 @@ def test_thread_sessions_and_channel_settings(tmp_path: Path) -> None:
         assert updated.conversation_id == "conv-xyz"
         assert updated.project_key == "ondotrip"
 
-        store.set_channel_setting("C1", "camping", "gemini-4-neon-medium", "plan")
+        store.set_channel_setting("C1", "traillog", "gemini-4-neon-medium", "plan")
         ch = store.get_channel_setting("C1")
         assert ch is not None
-        assert ch.project_key == "camping"
+        assert ch.project_key == "traillog"
         assert ch.mode == "plan"
     finally:
         store.close()
@@ -44,7 +44,7 @@ def test_jobs_schedules_and_dynamic_projects(tmp_path: Path) -> None:
         assert job.duration_sec == 3.2
         assert len(store.list_recent_jobs(5)) == 1
 
-        sched = store.add_schedule("09:30", "run", "mealandbrew", "mealandbrew", "C1", "U1")
+        sched = store.add_schedule("10:00", "run", "ondotrip", "ondotrip", "C1", "U1")
         assert sched.enabled is True
         assert len(store.list_schedules(only_enabled=True)) == 1
 

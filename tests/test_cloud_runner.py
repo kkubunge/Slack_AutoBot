@@ -19,8 +19,8 @@ def test_load_cloud_config_and_yaml_syntax() -> None:
     root = Path(__file__).resolve().parent.parent
     cfg = load_cloud_config(root / "cloud" / "cloud_repos.yaml")
     assert cfg.default_repo == "slack_aibot"
-    assert {"slack_aibot", "traillog", "ondotrip", "daylog", "videoplayer", "videodownloader"} <= set(cfg.repos.keys())
-    assert {"traillog", "traillog-dryrun", "ondotrip", "ondotrip-preview", "ondotrip-status"} <= set(cfg.workflows.keys())
+    assert set(cfg.repos.keys()) == {"slack_aibot", "traillog", "ondotrip"}
+    assert set(cfg.workflows.keys()) == {"traillog", "traillog-dryrun", "ondotrip", "ondotrip-preview", "ondotrip-status"}
 
     # 클라우드 매니페스트 및 Actions 워크플로우 YAML 구문 검증
     manifest = yaml.safe_load((root / "cloud" / "slack_cloud_manifest.yaml").read_text(encoding="utf-8"))
@@ -190,7 +190,7 @@ def test_trigger_remote_workflow_and_execute_cloud_payload(tmp_path: Path) -> No
     )
     assert rc_list == 0
     assert slack_calls[-1][0].endswith("chat.update")
-    assert "kkubunge/Daylog" in slack_calls[-1][1]["text"]
+    assert "kkubunge/Google_OndoTrip" in slack_calls[-1][1]["text"]
 
     # plan 모드 모의 AI 실행 (중첩 slack 메타데이터 형식 검증 포함)
     class FakeAgent:
@@ -210,7 +210,7 @@ def test_trigger_remote_workflow_and_execute_cloud_payload(tmp_path: Path) -> No
         payload={
             "job_id": "j2",
             "action": "ai",
-            "project": "daylog",
+            "project": "ondotrip",
             "mode": "plan",
             "prompt": "구조 확인",
             "slack": {

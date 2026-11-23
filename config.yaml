@@ -33,27 +33,9 @@ projects:
   ondotrip:
     path: "Google_OndoTrip"
     description: "공공데이터 기반 구글 블로그 자동 포스팅"
-  mealandbrew:
-    path: "NaverMap_MealAndBrew"
-    description: "티스토리 맛집/카페 자동 포스팅"
-  camping:
-    path: "NaverMap_Camping"
-    description: "티스토리 캠핑 자동 포스팅"
   traillog:
     path: "Instagram_TrailLog"
     description: "두루누비 인스타그램 카드뉴스"
-  daylog:
-    path: "Daylog"
-    description: "Daylog Android 앱"
-  videodownloader:
-    path: "VideoDownloader"
-    description: "VideoDownloader Android 앱"
-  videoplayer:
-    path: "VideoPlayer"
-    description: "VideoPlayer Android 앱"
-  tempday:
-    path: "Tstory_TempDay"
-    description: "Tstory_TempDay 프로젝트"
 
 tasks:
   ondotrip:
@@ -73,28 +55,6 @@ tasks:
       - "main.py"
       - "--status"
     description: "OndoTrip 누적 현황 조회"
-  mealandbrew:
-    project: "mealandbrew"
-    command:
-      - ".venv\\Scripts\\python.exe"
-      - "-m"
-      - "src.run_daily_pipeline"
-      - "--count"
-      - "5"
-      - "--mode"
-      - "draft"
-    description: "NaverMap_MealAndBrew 일일 초안 5건 생성"
-  camping:
-    project: "camping"
-    command:
-      - ".venv\\Scripts\\python.exe"
-      - "-m"
-      - "src.run_daily_pipeline"
-      - "--count"
-      - "5"
-      - "--mode"
-      - "draft"
-    description: "NaverMap_Camping 일일 초안 5건 생성"
   traillog-check:
     project: "traillog"
     command:

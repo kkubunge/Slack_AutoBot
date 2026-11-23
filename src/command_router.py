@@ -683,7 +683,7 @@ class CommandRouter:
             lines = ["*실행 가능한 등록 작업 프리셋*"]
             for key, task in self.config.tasks.items():
                 lines.append(f"• `{key}` (`{task.project}`) — {task.description}")
-            lines.append("\n실행 예시: `!실행 ondotrip-status` 또는 `!실행 mealandbrew`")
+            lines.append("\n실행 예시: `!실행 ondotrip-status` 또는 `!실행 traillog`")
             sink.send_immediate("\n".join(lines))
             return
 
@@ -928,8 +928,8 @@ class CommandRouter:
                 sink.send_immediate(
                     "등록된 내장 예약이 없습니다.\n"
                     "추가 예시:\n"
-                    "• `!예약 추가 09:30 run mealandbrew`\n"
-                    "• `!예약 추가 10:00 ai ondotrip 오늘자 로그 점검해줘`"
+                    "• `!예약 추가 10:00 run ondotrip`\n"
+                    "• `!예약 추가 09:00 ai traillog 오늘자 게시 이력 점검해줘`"
                 )
                 return
             lines = ["*Slack 내장 일일 예약 목록*"]

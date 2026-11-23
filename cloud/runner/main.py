@@ -73,7 +73,7 @@ def build_list_report(cloud_cfg: CloudAppConfig, list_target: str) -> str:
     lines.append("*원격 실행 가능한 워크플로우 프리셋*")
     for key, wf in cloud_cfg.workflows.items():
         lines.append(f"• `{key}` → `{wf.repo}` / `{wf.workflow}` — {wf.description}")
-    lines.append("\n_사용 예시: `!실행 traillog-dryrun` 또는 `[daylog] 앱 구조 분석해줘`_")
+    lines.append("\n_사용 예시: `!실행 traillog-dryrun` 또는 `[ondotrip] 글 작성 로직 분석해줘`_")
     return "\n".join(lines)
 
 

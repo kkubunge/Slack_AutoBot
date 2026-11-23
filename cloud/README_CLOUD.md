@@ -7,7 +7,7 @@
 ## 동작 구조
 
 ```text
-[Slack]  "@Slack_AIbot [daylog] 다크모드 설정 점검해줘"  (또는 /ai ...)
+[Slack]  "@Slack_AIbot [ondotrip] 글 요약 로직 점검해줘"  (또는 /ai ...)
    │  (Events API / Slash Command HTTPS Webhook)
    ▼
 [Cloudflare Workers]  (cloud/worker/src/index.js — 무료 플랜 일 10만 요청)
@@ -17,7 +17,7 @@
            │
            ▼
 [GitHub Actions Runner]  (.github/workflows/slack_ai_worker.yml)
-   ├─ 대상 저장소 체크아웃 (Slack_AIbot, Instagram_TrailLog, Daylog 등)
+   ├─ 대상 저장소 체크아웃 (Slack_AIbot, Instagram_TrailLog, Google_OndoTrip)
    ├─ cloud/runner/main.py (Gemini Function Calling 에이전트 실행)
    ├─ dev 모드 변경 발생 시 ai/slack-<job_id> 브랜치 푸시 & PR 자동 생성
    └─ Slack Web API로 기존 상태 메시지를 최종 보고서로 업데이트
@@ -34,11 +34,11 @@ GitHub 저장소 **Settings → Secrets and variables → Actions → New reposi
 | :--- | :--- | :--- |
 | `GEMINI_API_KEY` | Google AI Studio Gemini API 키 | **필수** (AI 개발/분석 시) |
 | `SLACK_BOT_TOKEN` | Slack Bot User OAuth Token (`xoxb-...`) | **필수** |
-| `GH_PAT` | GitHub Personal Access Token (`repo`, `workflow` 권한) — 다른 저장소(`Daylog`, `Instagram_TrailLog` 등) 체크아웃·PR·워크플로우 실행 시 필요 | **권장** |
+| `GH_PAT` | GitHub Personal Access Token (`repo`, `workflow` 권한) — 다른 저장소(`Instagram_TrailLog`, `Google_OndoTrip` 등) 체크아웃·PR·워크플로우 실행 시 필요 | **권장** |
 | `SLACK_REPORT_CHANNEL_ID` | Actions 수동 실행(`workflow_dispatch`) 시 보고받을 기본 채널 ID | 선택 |
 
 > [!NOTE]
-> 본 저장소(`Slack_AIbot`)만 제어할 때는 기본 `GITHUB_TOKEN`으로도 동작하지만, **다른 저장소(`Daylog`, `Instagram_TrailLog`, `VideoPlayer` 등)에 브랜치를 푸시하거나 원격 워크플로우(`!실행 traillog`)를 트리거하려면 `GH_PAT` 등록이 필요합니다.**
+> 본 저장소(`Slack_AIbot`)만 제어할 때는 기본 `GITHUB_TOKEN`으로도 동작하지만, **다른 저장소(`Instagram_TrailLog`, `Google_OndoTrip`)에 브랜치를 푸시하거나 원격 워크플로우(`!실행 traillog`, `!실행 ondotrip`)를 트리거하려면 `GH_PAT` 등록이 필요합니다.**
 
 ### 2단계: Cloudflare Workers 배포
 Cloudflare 무료 계정으로 1분 만에 게이트웨이를 배포합니다.
@@ -75,7 +75,7 @@ npx wrangler secret put ALLOWED_USER_IDS       # 본인 Slack User ID (쉼표로
 | `@Slack_AIbot !프로젝트` | 등록된 클라우드 GitHub 저장소·워크플로우 목록 보고 | `!프로젝트` |
 | `@Slack_AIbot !실행` | 원격 실행 가능한 GitHub Actions 목록 보고 | `!실행` |
 | `@Slack_AIbot !실행 <이름>` | 대상 저장소 워크플로우 원격 실행 | `!실행 traillog-dryrun` |
-| `@Slack_AIbot !분석 [저장소] <지시>` | 읽기 전용(`plan`) 코드 분석 보고 (PR 생성 없음) | `!분석 [daylog] 앱 설정 화면 구조 설명해줘` |
+| `@Slack_AIbot !분석 [저장소] <지시>` | 읽기 전용(`plan`) 코드 분석 보고 (PR 생성 없음) | `!분석 [ondotrip] 블로그 글 생성 구조 설명해줘` |
 | `@Slack_AIbot [저장소] <지시>` | 코드 수정·테스트 후 브랜치 & PR 자동 생성(`dev`) | `[traillog] 캡션 문구 오타 점검하고 고쳐줘` |
 | `/ai <명령 또는 지시>` | 어느 채널에서든 슬래시 명령으로 즉시 실행 | `/ai [slack_aibot] README 오타 확인해줘` |
 
