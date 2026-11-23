@@ -184,8 +184,9 @@ test("Worker HTTP 핸들러: health, url_verification, retry 무시, app_mention
   assert.match(calls[0].url, /chat\.postMessage/);
   assert.match(calls[1].url, /dispatches$/);
   assert.equal(calls[1].body.event_type, "slack_ai_command");
+  assert.ok(Object.keys(calls[1].body.client_payload).length <= 10);
   assert.equal(calls[1].body.client_payload.project, "daylog");
-  assert.equal(calls[1].body.client_payload.status_ts, "1700000100.123456");
+  assert.equal(calls[1].body.client_payload.slack.status_ts, "1700000100.123456");
 
   // 5. /slack/commands (/ai)
   const formBody = new URLSearchParams({
@@ -205,10 +206,11 @@ test("Worker HTTP 핸들러: health, url_verification, retry 무시, app_mention
   const cmdRes = await handler.fetch(cmdReq, env, ctx);
   assert.equal(cmdRes.status, 200);
   const cmdJson = await cmdRes.json();
-  assert.equal(cmdJson.response_type, "in_channel");
+  assert.equal(cmdJson.response_type, "ephemeral");
   await Promise.all(pending.splice(0));
 
   assert.equal(calls.length, 4);
+  assert.ok(Object.keys(calls[3].body.client_payload).length <= 10);
   assert.equal(calls[3].body.client_payload.action, "run");
   assert.equal(calls[3].body.client_payload.workflow, "traillog-dryrun");
 });

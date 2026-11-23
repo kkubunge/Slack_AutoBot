@@ -115,11 +115,13 @@ async function dispatchToCloudWorker({
     prompt: parsed.prompt,
     workflow: parsed.workflow || "",
     extra_args: parsed.extraArgs || "",
-    channel_id: channelId || "",
-    thread_ts: threadTs || statusTs || "",
-    status_ts: statusTs,
-    user_id: userId || "",
-    response_url: responseUrl,
+    slack: {
+      channel_id: channelId || "",
+      thread_ts: threadTs || statusTs || "",
+      status_ts: statusTs,
+      user_id: userId || "",
+      response_url: responseUrl,
+    },
   };
 
   const ghRes = await triggerGitHubDispatch(fetchFn, env, clientPayload);
@@ -292,8 +294,8 @@ export function createHandler(deps = {}) {
         }
 
         return jsonResponse({
-          response_type: "in_channel",
-          text: `:rocket: 클라우드 작업 요청을 접수했습니다 (\`${parsed.project || parsed.workflow}\`). 결과를 채널 스레드로 보고합니다.`,
+          response_type: "ephemeral",
+          text: `:rocket: 클라우드 작업 요청을 접수했습니다 (\`${parsed.project || parsed.workflow}\`). 진행 상태와 결과를 채널에 보고합니다.`,
         });
       }
 

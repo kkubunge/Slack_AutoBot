@@ -187,7 +187,7 @@ def test_trigger_remote_workflow_and_execute_cloud_payload(tmp_path: Path) -> No
     assert slack_calls[-1][0].endswith("chat.update")
     assert "kkubunge/Daylog" in slack_calls[-1][1]["text"]
 
-    # plan 모드 모의 AI 실행
+    # plan 모드 모의 AI 실행 (중첩 slack 메타데이터 형식 검증 포함)
     class FakeAgent:
         def run(self, prompt, toolchain, mode="plan", on_progress=None):
             from cloud.runner.gemini_agent import AgentRunResult
@@ -208,9 +208,11 @@ def test_trigger_remote_workflow_and_execute_cloud_payload(tmp_path: Path) -> No
             "project": "daylog",
             "mode": "plan",
             "prompt": "구조 확인",
-            "channel_id": "C1",
-            "thread_ts": "100.0",
-            "status_ts": "100.2",
+            "slack": {
+                "channel_id": "C1",
+                "thread_ts": "100.0",
+                "status_ts": "100.2",
+            },
         },
         cloud_cfg=cfg,
         reporter=reporter,
@@ -219,5 +221,6 @@ def test_trigger_remote_workflow_and_execute_cloud_payload(tmp_path: Path) -> No
         run_url="https://github.com/kkubunge/Slack_AIbot/actions/runs/1",
     )
     assert rc_ai == 0
+    assert slack_calls[-1][1]["ts"] == "100.2"
     assert "클라우드 AI 작업 완료" in slack_calls[-1][1]["text"]
     assert "*분석 결과*" in slack_calls[-1][1]["text"]

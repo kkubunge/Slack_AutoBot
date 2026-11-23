@@ -127,6 +127,17 @@ def format_cloud_ai_report(
     return "\n".join(lines)
 
 
+def _extract_slack_meta(payload: dict[str, Any]) -> tuple[str, str, str, str]:
+    """중첩된 `slack` 객체 또는 최상위 키에서 Slack 보고 메타데이터를 호환 추출한다."""
+    slack_obj = payload.get("slack")
+    slack_dict = slack_obj if isinstance(slack_obj, dict) else {}
+    channel_id = str(slack_dict.get("channel_id") or payload.get("channel_id") or "").strip()
+    thread_ts = str(slack_dict.get("thread_ts") or payload.get("thread_ts") or "").strip()
+    status_ts = str(slack_dict.get("status_ts") or payload.get("status_ts") or "").strip()
+    response_url = str(slack_dict.get("response_url") or payload.get("response_url") or "").strip()
+    return channel_id, thread_ts, status_ts, response_url
+
+
 def execute_cloud_payload(
     payload: dict[str, Any],
     cloud_cfg: CloudAppConfig,
@@ -144,10 +155,7 @@ def execute_cloud_payload(
     mode = str(payload.get("mode") or "dev").strip().lower()
     prompt = str(payload.get("prompt") or "").strip()
     workflow_key = str(payload.get("workflow") or "").strip().lower()
-    channel_id = str(payload.get("channel_id") or "").strip()
-    thread_ts = str(payload.get("thread_ts") or "").strip()
-    status_ts = str(payload.get("status_ts") or "").strip()
-    response_url = str(payload.get("response_url") or "").strip()
+    channel_id, thread_ts, status_ts, response_url = _extract_slack_meta(payload)
 
     def _report(text: str) -> None:
         reporter.report_final(
@@ -307,14 +315,12 @@ def main(argv: list[str] | None = None) -> int:
         )
     except Exception as exc:
         logger.exception("클라우드 워커 치명 오류: %s", exc)
-        channel_id = str(payload.get("channel_id") or "")
-        thread_ts = str(payload.get("thread_ts") or "")
-        status_ts = str(payload.get("status_ts") or "")
+        channel_id, thread_ts, status_ts, response_url = _extract_slack_meta(payload)
         run_url = os.environ.get("GITHUB_RUN_URL", "")
         err_msg = f":x: *클라우드 워커 실행 중 예외 발생*\n```\n{exc}\n```"
         if run_url:
             err_msg += f"\n<{run_url}|GitHub Actions 실행 로그 보기>"
-        reporter.report_final(channel_id, thread_ts, status_ts, err_msg)
+        reporter.report_final(channel_id, thread_ts, status_ts, err_msg, response_url=response_url)
         return 1
 
 
