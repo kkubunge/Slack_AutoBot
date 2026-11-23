@@ -33,9 +33,84 @@ from src.task_runner import TaskResult, TaskRunner
 
 logger = logging.getLogger(__name__)
 
-_PROJECT_PREFIX_RE = re.compile(r"^\[([a-zA-Z0-9_-]+)\]\s*(.+)$", re.DOTALL)
+_PROJECT_PREFIX_RE = re.compile(r"^\[([^\]]+)\]\s*(.+)$", re.DOTALL)
 _TIME_HHMM_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 _MENTION_PREFIX_RE = re.compile(r"^(?:<@[A-Z0-9]+>\s*)+")
+_GOOGLE_BLOG_HEAD_RE = re.compile(r"^(구글\s+블로그)(?:\s+(.*))?$", re.DOTALL)
+
+_PROJECT_ALIASES: dict[str, str] = {
+    "온도트립": "ondotrip",
+    "구글블로그": "ondotrip",
+    "트레일로그": "traillog",
+    "인스타": "traillog",
+    "인스타그램": "traillog",
+}
+
+_WORKFLOW_SUBKEY_ALIASES: dict[str, str] = {
+    "상태": "status",
+    "status": "status",
+    "미리보기": "preview",
+    "preview": "preview",
+    "임시저장": "draft",
+    "초안": "draft",
+    "draft": "draft",
+    "드라이런": "dryrun",
+    "dryrun": "dryrun",
+    "테스트": "dryrun",
+    "점검": "dryrun",
+}
+
+
+def resolve_project_alias(raw: str) -> str:
+    """프로젝트 이름 및 한글 별칭을 표준 키로 정규화한다."""
+    cleaned = str(raw or "").strip().lower()
+    if not cleaned:
+        return ""
+    compact = "".join(cleaned.split())
+    return _PROJECT_ALIASES.get(compact, cleaned)
+
+
+def resolve_workflow_alias(raw: str) -> str:
+    """작업/워크플로우 프리셋 이름 및 한글 별칭을 표준 키로 정규화한다."""
+    cleaned = str(raw or "").strip().lower()
+    if not cleaned:
+        return ""
+    compact = "".join(cleaned.split())
+    if compact in _PROJECT_ALIASES:
+        return _PROJECT_ALIASES[compact]
+    if "-" in cleaned:
+        prefix_raw, suffix_raw = cleaned.split("-", 1)
+        prefix = resolve_project_alias(prefix_raw)
+        suffix_compact = "".join(suffix_raw.split())
+        suffix = _WORKFLOW_SUBKEY_ALIASES.get(suffix_compact, suffix_compact)
+        return f"{prefix}-{suffix}"
+    return cleaned
+
+
+def parse_run_args(rest: str) -> tuple[str, str]:
+    """`!실행` 또는 예약 `run` 인자에서 별칭을 적용한 작업 키와 추가 인자를 분리한다."""
+    trimmed = str(rest or "").strip()
+    if not trimmed:
+        return "", ""
+
+    m_gb = _GOOGLE_BLOG_HEAD_RE.match(trimmed)
+    if m_gb:
+        head = "구글블로그"
+        tail = (m_gb.group(2) or "").strip()
+    else:
+        parts = trimmed.split(maxsplit=1)
+        head = parts[0].strip()
+        tail = parts[1].strip() if len(parts) > 1 else ""
+
+    resolved_head = resolve_project_alias(head)
+    if resolved_head in {"ondotrip", "traillog"} and tail:
+        tail_parts = tail.split(maxsplit=1)
+        next_tok = tail_parts[0].strip().lower()
+        if next_tok in _WORKFLOW_SUBKEY_ALIASES:
+            head = f"{head}-{next_tok}"
+            tail = tail_parts[1].strip() if len(tail_parts) > 1 else ""
+
+    return resolve_workflow_alias(head), tail
 
 
 class ReplySink(ABC):
@@ -338,7 +413,7 @@ class CommandRouter:
 
     def _cmd_select_project(self, arg: str, msg: IncomingMessage, sink: ReplySink) -> None:
         """현재 채널의 기본 프로젝트를 변경한다."""
-        key = arg.strip().lower()
+        key = resolve_project_alias(arg)
         if not key:
             sink.send_immediate("사용법: `!선택 <프로젝트키>`\n목록 조회: `!프로젝트`")
             return
@@ -431,7 +506,7 @@ class CommandRouter:
 
         prefix_match = _PROJECT_PREFIX_RE.match(prompt)
         if prefix_match:
-            candidate_proj = prefix_match.group(1).strip().lower()
+            candidate_proj = resolve_project_alias(prefix_match.group(1))
             inner_prompt = prefix_match.group(2).strip()
             if candidate_proj not in self.config.projects:
                 sink.send_immediate(
@@ -683,9 +758,7 @@ class CommandRouter:
             sink.send_immediate("\n".join(lines))
             return
 
-        parts = arg.split(maxsplit=1)
-        task_key = parts[0].strip().lower()
-        extra_args = parts[1].strip() if len(parts) > 1 else ""
+        task_key, extra_args = parse_run_args(arg)
 
         if task_key not in self.config.tasks:
             sink.send_immediate(
@@ -962,18 +1035,18 @@ class CommandRouter:
                 return
 
             if kind == "run":
-                task_key = tail.split(maxsplit=1)[0].lower()
+                task_key, extra_tail = parse_run_args(tail)
                 if task_key not in self.config.tasks:
                     sink.send_immediate(f":warning: 등록되지 않은 작업입니다: `{task_key}` (`!실행`으로 목록 확인)")
                     return
                 proj_key = self.config.tasks[task_key].project
-                payload = tail
+                payload = f"{task_key} {extra_tail}".strip()
             else:
                 ai_parts = tail.split(maxsplit=1)
                 if len(ai_parts) < 2:
                     sink.send_immediate("사용법: `!예약 추가 <HH:MM> ai <프로젝트키> <AI 지시내용>`")
                     return
-                proj_key = ai_parts[0].strip().lower()
+                proj_key = resolve_project_alias(ai_parts[0])
                 payload = ai_parts[1].strip()
                 if proj_key not in self.config.projects:
                     sink.send_immediate(f":warning: 등록되지 않은 프로젝트입니다: `{proj_key}`")

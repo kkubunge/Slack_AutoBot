@@ -3,7 +3,94 @@
  */
 
 const MENTION_PREFIX_RE = /^(?:<@[A-Za-z0-9_]+>\s*)+/;
-const PROJECT_PREFIX_RE = /^\[([a-zA-Z0-9_-]+)\]\s*(.+)$/s;
+const PROJECT_PREFIX_RE = /^\[([^\]]+)\]\s*(.+)$/s;
+
+const PROJECT_ALIASES = {
+  온도트립: "ondotrip",
+  구글블로그: "ondotrip",
+  트레일로그: "traillog",
+  인스타: "traillog",
+  인스타그램: "traillog",
+};
+
+const WORKFLOW_SUBKEY_ALIASES = {
+  상태: "status",
+  status: "status",
+  미리보기: "preview",
+  preview: "preview",
+  임시저장: "draft",
+  초안: "draft",
+  draft: "draft",
+  드라이런: "dryrun",
+  dryrun: "dryrun",
+  테스트: "dryrun",
+  점검: "dryrun",
+};
+
+/**
+ * 프로젝트(저장소) 이름 및 한글 별칭을 표준 키로 정규화한다.
+ */
+export function resolveProjectAlias(raw) {
+  const cleaned = String(raw || "").trim().toLowerCase();
+  if (!cleaned) return "";
+  const compact = cleaned.replace(/\s+/g, "");
+  return PROJECT_ALIASES[compact] || cleaned;
+}
+
+/**
+ * 워크플로우 프리셋 이름 및 한글 별칭을 표준 프리셋 키로 정규화한다.
+ */
+export function resolveWorkflowAlias(raw) {
+  const cleaned = String(raw || "").trim().toLowerCase();
+  if (!cleaned) return "";
+  const compact = cleaned.replace(/\s+/g, "");
+  if (PROJECT_ALIASES[compact]) {
+    return PROJECT_ALIASES[compact];
+  }
+  const hyphenIdx = cleaned.indexOf("-");
+  if (hyphenIdx !== -1) {
+    const prefix = resolveProjectAlias(cleaned.slice(0, hyphenIdx));
+    const suffixCompact = cleaned.slice(hyphenIdx + 1).trim().replace(/\s+/g, "");
+    const suffix = WORKFLOW_SUBKEY_ALIASES[suffixCompact] || suffixCompact;
+    return `${prefix}-${suffix}`;
+  }
+  return cleaned;
+}
+
+/**
+ * `!실행` 뒤 인자에서 워크플로우 별칭(공백 포함 형태)과 추가 인자를 분리한다.
+ */
+function parseWorkflowRunArgs(rest) {
+  const trimmed = String(rest || "").trim();
+  if (!trimmed) return { workflow: "", extraArgs: "" };
+
+  let head = "";
+  let tail = "";
+  const googleBlogMatch = trimmed.match(/^(구글\s+블로그)(?:\s+(.*))?$/s);
+  if (googleBlogMatch) {
+    head = "구글블로그";
+    tail = (googleBlogMatch[2] || "").trim();
+  } else {
+    const spaceIdx = trimmed.search(/\s/);
+    head = spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx);
+    tail = spaceIdx === -1 ? "" : trimmed.slice(spaceIdx).trim();
+  }
+
+  const resolvedHead = resolveProjectAlias(head);
+  if ((resolvedHead === "ondotrip" || resolvedHead === "traillog") && tail) {
+    const tailSpaceIdx = tail.search(/\s/);
+    const nextToken = (tailSpaceIdx === -1 ? tail : tail.slice(0, tailSpaceIdx)).toLowerCase();
+    if (WORKFLOW_SUBKEY_ALIASES[nextToken]) {
+      head = `${head}-${nextToken}`;
+      tail = tailSpaceIdx === -1 ? "" : tail.slice(tailSpaceIdx).trim();
+    }
+  }
+
+  return {
+    workflow: resolveWorkflowAlias(head),
+    extraArgs: tail,
+  };
+}
 
 /**
  * 메시지 앞부분의 봇 멘션(<@U...>)을 제거한다.
@@ -74,7 +161,7 @@ function extractProjectPrefix(text, fallbackProject) {
     return { project: fallbackProject, prompt: text.trim() };
   }
   return {
-    project: matched[1].trim().toLowerCase(),
+    project: resolveProjectAlias(matched[1]),
     prompt: matched[2].trim(),
   };
 }
@@ -114,7 +201,7 @@ export function parseCloudCommand(rawText, defaultProject = "slack_aibot") {
         kind: "usage",
         message:
           ":information_source: 클라우드 모드에서는 기본 프로젝트 전환 대신 메시지 앞에 `[저장소]` 접두어를 붙여서 사용합니다.\n" +
-          "• 예) `[ondotrip] 글 요약 로직 점검해줘`, `[traillog] 캡션 문구 고쳐줘`, `[slack_aibot] ...`\n" +
+          "• 예) `[온도트립]`(`[구글블로그]`·`[ondotrip]`) `글 요약 로직 점검해줘`, `[트레일로그]`(`[인스타]`·`[traillog]`) `캡션 문구 고쳐줘`\n" +
           "• 전체 저장소 목록은 `!프로젝트`로 확인하세요.",
       };
     }
@@ -161,9 +248,7 @@ export function parseCloudCommand(rawText, defaultProject = "slack_aibot") {
           extraArgs: "",
         };
       }
-      const spaceIdx = rest.search(/\s/);
-      const workflow = (spaceIdx === -1 ? rest : rest.slice(0, spaceIdx)).toLowerCase();
-      const extraArgs = spaceIdx === -1 ? "" : rest.slice(spaceIdx).trim();
+      const { workflow, extraArgs } = parseWorkflowRunArgs(rest);
       return {
         kind: "dispatch",
         action: "run",
@@ -236,11 +321,12 @@ export function buildCloudHelpText() {
     "• `[저장소] 개발 지시` → 해당 GitHub 저장소에서 AI가 코드 수정 후 브랜치·PR 자동 생성\n" +
     "• `!개발 [저장소] 지시` / `!dev [저장소] 지시` → `dev` 모드(코드 수정·검증·PR)\n" +
     "• `!분석 [저장소] 지시` / `!plan [저장소] 지시` → `plan` 모드(읽기 전용 코드 분석·계획)\n" +
-    "• 슬래시 명령: `/ai [ondotrip] 글 작성 로직 구조 분석해줘`\n\n" +
+    "• 프로젝트/실행 별칭: `ondotrip` = `온도트립` / `구글블로그` | `traillog` = `트레일로그` / `인스타`\n" +
+    "• 슬래시 명령: `/ai [온도트립] 글 작성 로직 구조 분석해줘`\n\n" +
     "*2. 원격 저장소·워크플로우·예약·상태 조회*\n" +
     "• `!프로젝트` / `!projects` → 등록된 GitHub 저장소 및 실행 프리셋 목록 조회\n" +
     "• `!실행` / `!run` → 원격 실행 가능한 GitHub Actions 워크플로우 목록 조회\n" +
-    "• `!실행 <프리셋>` → 등록된 원격 워크플로우 즉시 실행 (예: `!실행 ondotrip-status`, `!실행 traillog-dryrun`)\n" +
+    "• `!실행 <프리셋>` → 등록된 원격 워크플로우 즉시 실행 (예: `!실행 온도트립 상태`, `!실행 인스타 드라이런`)\n" +
     "• `!예약` / `!schedule` → 클라우드 정기 자동 실행 스케줄 현황 조회\n" +
     "• `!상태` / `!status` → 클라우드 게이트웨이 및 저장소별 최근 실행 상태 조회\n" +
     "• `!작업` / `!jobs` → 최근 GitHub Actions 작업 이력 및 로그 링크 조회\n" +

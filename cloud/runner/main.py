@@ -26,6 +26,63 @@ from src.formatter import markdown_to_slack_mrkdwn  # noqa: E402
 logger = logging.getLogger(__name__)
 
 
+_PROJECT_ALIASES: dict[str, str] = {
+    "온도트립": "ondotrip",
+    "구글블로그": "ondotrip",
+    "트레일로그": "traillog",
+    "인스타": "traillog",
+    "인스타그램": "traillog",
+}
+
+_WORKFLOW_SUBKEY_ALIASES: dict[str, str] = {
+    "상태": "status",
+    "status": "status",
+    "미리보기": "preview",
+    "preview": "preview",
+    "임시저장": "draft",
+    "초안": "draft",
+    "draft": "draft",
+    "드라이런": "dryrun",
+    "dryrun": "dryrun",
+    "테스트": "dryrun",
+    "점검": "dryrun",
+}
+
+
+def resolve_project_alias(raw: str) -> str:
+    """프로젝트(저장소) 이름 및 한글 별칭을 표준 키로 정규화한다."""
+    cleaned = str(raw or "").strip().lower()
+    if not cleaned:
+        return ""
+    compact = "".join(cleaned.split())
+    return _PROJECT_ALIASES.get(compact, cleaned)
+
+
+def resolve_workflow_alias(raw: str) -> str:
+    """워크플로우 프리셋 이름 및 한글 별칭을 표준 프리셋 키로 정규화한다."""
+    cleaned = str(raw or "").strip().lower()
+    if not cleaned:
+        return ""
+    compact = "".join(cleaned.split())
+    if compact in _PROJECT_ALIASES:
+        return _PROJECT_ALIASES[compact]
+    if "-" in cleaned:
+        prefix_raw, suffix_raw = cleaned.split("-", 1)
+        prefix = resolve_project_alias(prefix_raw)
+        suffix_compact = "".join(suffix_raw.split())
+        suffix = _WORKFLOW_SUBKEY_ALIASES.get(suffix_compact, suffix_compact)
+        return f"{prefix}-{suffix}"
+    parts = cleaned.split()
+    if len(parts) >= 2:
+        if len(parts) == 3 and f"{parts[0]}{parts[1]}" == "구글블로그":
+            head, sub = "ondotrip", parts[2]
+        else:
+            head, sub = resolve_project_alias(parts[0]), parts[1]
+        if head in {"ondotrip", "traillog"} and sub in _WORKFLOW_SUBKEY_ALIASES:
+            return f"{head}-{_WORKFLOW_SUBKEY_ALIASES[sub]}"
+    return cleaned
+
+
 def load_payload(payload_file: str = "") -> dict[str, Any]:
     """환경변수 `PAYLOAD_JSON` 또는 파일/INPUT_* 변수에서 실행 페이로드를 읽는다."""
     raw_json = os.environ.get("PAYLOAD_JSON", "").strip()
@@ -73,7 +130,10 @@ def build_list_report(cloud_cfg: CloudAppConfig, list_target: str) -> str:
     lines.append("*원격 실행 가능한 워크플로우 프리셋*")
     for key, wf in cloud_cfg.workflows.items():
         lines.append(f"• `{key}` → `{wf.repo}` / `{wf.workflow}` — {wf.description}")
-    lines.append("\n_사용 예시: `!실행 traillog-dryrun` 또는 `[ondotrip] 글 작성 로직 분석해줘`_")
+    lines.append(
+        "\n_사용 예시: `!실행 인스타 드라이런` 또는 `[온도트립] 글 작성 로직 분석해줘`_\n"
+        "_별칭: 온도트립·구글블로그 → `ondotrip` | 트레일로그·인스타 → `traillog`_"
+    )
     return "\n".join(lines)
 
 
@@ -151,10 +211,10 @@ def execute_cloud_payload(
     """파싱된 클라우드 명령을 실행하고 Slack으로 최종 결과를 보고한다."""
     job_id = str(payload.get("job_id") or uuid.uuid4().hex[:8])
     action = str(payload.get("action") or "list").strip().lower()
-    project_key = str(payload.get("project") or cloud_cfg.default_repo).strip().lower()
+    project_key = resolve_project_alias(str(payload.get("project") or cloud_cfg.default_repo))
     mode = str(payload.get("mode") or "dev").strip().lower()
     prompt = str(payload.get("prompt") or "").strip()
-    workflow_key = str(payload.get("workflow") or "").strip().lower()
+    workflow_key = resolve_workflow_alias(str(payload.get("workflow") or ""))
     channel_id, thread_ts, status_ts, response_url = _extract_slack_meta(payload)
 
     def _report(text: str) -> None:

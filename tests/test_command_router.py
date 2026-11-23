@@ -263,3 +263,33 @@ def test_stop_running_background_job(tmp_path: Path) -> None:
         assert sink.finished[-1][2] is True
     finally:
         store.close()
+
+
+def test_korean_project_and_task_aliases(tmp_path: Path) -> None:
+    """로컬 CommandRouter에서 온도트립·구글블로그·트레일로그·인스타 한글 별칭이 정상 동작하는지 검증한다."""
+    cfg, store = _build_env(tmp_path)
+    trail_dir = tmp_path / "Instagram_TrailLog"
+    trail_dir.mkdir(parents=True)
+    cfg.projects["traillog"] = ProjectConfig("traillog", trail_dir, "Instagram_TrailLog", "인스타 봇")
+    fake_agy = FakeAgyRunner()
+    fake_task = FakeTaskRunner()
+    try:
+        router = CommandRouter(cfg, store, fake_agy, fake_task, background=False)
+        sink = RecordingSink()
+
+        router.handle_message(IncomingMessage("!선택 온도트립", "U_ALLOWED", "C1", "1", "1"), sink)
+        assert "ondotrip" in sink.immediate[-1]
+
+        router.handle_message(IncomingMessage("[구글블로그] 구조 요약해줘", "U_ALLOWED", "C1", "2", "2"), sink)
+        assert fake_agy.calls[-1]["cwd"] == cfg.projects["ondotrip"].path
+
+        router.handle_message(IncomingMessage("[인스타] 캡션 확인해줘", "U_ALLOWED", "C1", "3", "3"), sink)
+        assert fake_agy.calls[-1]["cwd"] == trail_dir
+
+        router.handle_message(IncomingMessage("!실행 온도트립-상태 --verbose", "U_ALLOWED", "C1", "4", "4"), sink)
+        assert fake_task.calls[-1] == ("ondotrip-status", cfg.projects["ondotrip"].path, "--verbose")
+
+        router.handle_message(IncomingMessage("!실행 구글블로그 상태", "U_ALLOWED", "C1", "5", "5"), sink)
+        assert fake_task.calls[-1] == ("ondotrip-status", cfg.projects["ondotrip"].path, "")
+    finally:
+        store.close()

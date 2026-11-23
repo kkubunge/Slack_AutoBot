@@ -349,3 +349,56 @@ def test_slack_web_reporter_posts_to_main_without_thread_ts() -> None:
     for url, body in calls[1:]:
         assert url.endswith("chat.postMessage")
         assert "thread_ts" not in body
+
+
+def test_execute_cloud_payload_supports_korean_aliases(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """한글 별칭(온도트립·구글블로그·트레일로그·인스타)으로 전달된 payload도 표준 키로 해석되는지 검증한다."""
+    root = Path(__file__).resolve().parent.parent
+    cfg = load_cloud_config(root / "cloud" / "cloud_repos.yaml")
+
+    triggered: list[dict] = []
+
+    def fake_trigger(*, repo_full_name, workflow_file, ref="main", inputs=None, token=""):
+        triggered.append({"repo": repo_full_name, "workflow": workflow_file, "inputs": dict(inputs or {})})
+        return {"ok": True, "actions_url": f"https://github.com/{repo_full_name}/actions"}
+
+    monkeypatch.setattr("cloud.runner.main.trigger_remote_workflow", fake_trigger)
+    reporter = SlackWebReporter(bot_token="xoxb-test", transport=lambda u, h, b: {"ok": True, "ts": "1.1"})
+
+    assert execute_cloud_payload(
+        payload={"job_id": "a1", "action": "run", "workflow": "인스타", "channel_id": "D1"},
+        cloud_cfg=cfg,
+        reporter=reporter,
+        gh_token="ghp-test",
+    ) == 0
+    assert triggered[-1]["repo"] == "kkubunge/Instagram_TrailLog"
+
+    assert execute_cloud_payload(
+        payload={"job_id": "a2", "action": "run", "workflow": "구글블로그-상태", "channel_id": "D1"},
+        cloud_cfg=cfg,
+        reporter=reporter,
+        gh_token="ghp-test",
+    ) == 0
+    assert triggered[-1]["repo"] == "kkubunge/Google_OndoTrip"
+    assert triggered[-1]["inputs"]["status_only"] == "true" or triggered[-1]["inputs"]["status_only"] is True
+
+    class FakeAgent:
+        def run(self, prompt, toolchain, mode="plan", on_progress=None):
+            from cloud.runner.gemini_agent import AgentRunResult
+
+            return AgentRunResult(success=True, response="확인 완료", model_used="gemini-2.5-pro", turns=1)
+
+    (tmp_path / "README.md").write_text("# Demo", encoding="utf-8")
+    slack_msgs: list[str] = []
+    reporter2 = SlackWebReporter(
+        bot_token="xoxb-test",
+        transport=lambda u, h, b: slack_msgs.append(b.get("text", "")) or {"ok": True, "ts": "2.1"},
+    )
+    assert execute_cloud_payload(
+        payload={"job_id": "a3", "action": "ai", "project": "온도트립", "mode": "plan", "prompt": "구조 확인", "channel_id": "D1"},
+        cloud_cfg=cfg,
+        reporter=reporter2,
+        target_repo_dir=tmp_path,
+        agent=FakeAgent(),
+    ) == 0
+    assert "kkubunge/Google_OndoTrip" in slack_msgs[-1]

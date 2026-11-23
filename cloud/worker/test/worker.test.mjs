@@ -76,7 +76,51 @@ test("parseCloudCommand: 도움말, 목록, 워크플로우 실행, [프로젝�
   assert.equal(parseCloudCommand("!작업").kind, "jobs");
   const selectGuide = parseCloudCommand("!선택 ondotrip");
   assert.equal(selectGuide.kind, "usage");
-  assert.match(selectGuide.message, /\[ondotrip\]/);
+  assert.match(selectGuide.message, /온도트립/);
+});
+
+test("parseCloudCommand: 한글 별칭(온도트립·구글블로그·트레일로그·인스타) 파싱", () => {
+  const devOndo = parseCloudCommand("[온도트립] 글 수정해줘");
+  assert.equal(devOndo.action, "ai");
+  assert.equal(devOndo.mode, "dev");
+  assert.equal(devOndo.project, "ondotrip");
+  assert.equal(devOndo.prompt, "글 수정해줘");
+
+  assert.equal(parseCloudCommand("[구글블로그] 구조 분석").project, "ondotrip");
+  assert.equal(parseCloudCommand("[구글 블로그] 구조 분석").project, "ondotrip");
+
+  const planTrail = parseCloudCommand("!분석 [트레일로그] 확인");
+  assert.equal(planTrail.action, "ai");
+  assert.equal(planTrail.mode, "plan");
+  assert.equal(planTrail.project, "traillog");
+  assert.equal(planTrail.prompt, "확인");
+
+  const devInsta = parseCloudCommand("!개발 [인스타] 캡션 수정");
+  assert.equal(devInsta.action, "ai");
+  assert.equal(devInsta.mode, "dev");
+  assert.equal(devInsta.project, "traillog");
+  assert.equal(devInsta.prompt, "캡션 수정");
+
+  const runCases = [
+    ["!실행 온도트립", "ondotrip", ""],
+    ["!실행 구글블로그", "ondotrip", ""],
+    ["!실행 구글 블로그", "ondotrip", ""],
+    ["!실행 트레일로그", "traillog", ""],
+    ["!실행 인스타", "traillog", ""],
+    ["!실행 인스타그램", "traillog", ""],
+    ["!실행 온도트립-상태", "ondotrip-status", ""],
+    ["!실행 구글블로그-미리보기", "ondotrip-preview", ""],
+    ["!실행 온도트립 상태", "ondotrip-status", ""],
+    ["!실행 구글 블로그 상태 --verbose", "ondotrip-status", "--verbose"],
+    ["!실행 인스타-드라이런", "traillog-dryrun", ""],
+    ["!실행 인스타 드라이런", "traillog-dryrun", ""],
+  ];
+  for (const [cmd, expectedWf, expectedExtra] of runCases) {
+    const parsed = parseCloudCommand(cmd);
+    assert.equal(parsed.action, "run", cmd);
+    assert.equal(parsed.workflow, expectedWf, cmd);
+    assert.equal(parsed.extraArgs, expectedExtra, cmd);
+  }
 });
 
 test("checkAuthorization: 허용 목록 미설정/불일치 차단 및 ALLOW_ALL_USERS 허용", () => {
