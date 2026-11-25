@@ -3,7 +3,7 @@ main = "src/index.js"
 compatibility_date = "2025-10-01"
 
 [triggers]
-# 1) 매일 10:00 KST (UTC 01:00): Google_OndoTrip 자동 공개 발행 5건
+# 1) 매일 10:00 KST (UTC 01:00): Google_OndoTrip 자동 임시저장(Draft) 5건
 # 2) 매일 09/11/13/15/17시 KST (UTC 00,02,04,06,08:00): Instagram_TrailLog 자동 게시 1건씩 (일 5회)
 # 3) 매일 19:30 KST (UTC 10:30): 당일 실행 누락·지연·실패 자동 감시 및 Slack 경고
 crons = ["0 1 * * *", "0 0,2,4,6,8 * * *", "30 10 * * *"]

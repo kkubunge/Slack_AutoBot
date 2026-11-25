@@ -50,10 +50,10 @@ workflows:
     ref: "main"
     inputs:
       count: "5"
-      publish: true
+      publish: false
       preview_only: false
       status_only: false
-    description: "OndoTrip 일일 자동 공개 발행 5건 + Slack 보고"
+    description: "OndoTrip 일일 자동 임시저장(Draft) 5건 + Slack 보고"
   ondotrip-draft:
     repo: "kkubunge/Google_OndoTrip"
     workflow: "daily_post.yml"

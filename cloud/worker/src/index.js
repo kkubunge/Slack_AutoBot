@@ -143,7 +143,7 @@ function buildCloudScheduleText(env, args = "") {
   lines.push(
     ":alarm_clock: *클라우드 정기 자동 실행 예약 현황*",
     `• *Google_OndoTrip (\`온도트립\`, \`ondotrip\`)*: Cloudflare Workers Cron (\`0 1 * * *\`, *매일 오전 10:00 KST*)`,
-    `  - 동작: \`${ondoRepo}\` 자동 공개 발행 ${ondoCount}건 및 Slack 보고`,
+    `  - 동작: \`${ondoRepo}\` 자동 임시저장(Draft) ${ondoCount}건 및 Slack 보고`,
     `• *Instagram_TrailLog (\`인스타\`, \`traillog\`)*: Cloudflare Workers Cron (\`0 0,2,4,6,8 * * *\`, *매일 09:00 · 11:00 · 13:00 · 15:00 · 17:00 KST*)`,
     `  - 동작: \`${trailRepo}\` 미게시 코스 카드뉴스 자동 게시 및 Slack 보고 (목표 ${trailTarget}건, 트리거 실패 시 즉시 알림)`,
     "• *일일 누락·지연·실패 감시 (Watchdog)*: Cloudflare Workers Cron (`30 10 * * *`, *매일 19:30 KST*)",
@@ -702,7 +702,7 @@ export function createHandler(deps = {}) {
           return;
         }
 
-        // 3) 기본(매일 10:00 KST, 0 1 * * *): Google_OndoTrip 일일 자동 공개 발행
+        // 3) 기본(매일 10:00 KST, 0 1 * * *): Google_OndoTrip 일일 자동 임시저장(Draft)
         const repoFullName = env.ONDOTRIP_REPO || "kkubunge/Google_OndoTrip";
         const workflowFile = env.ONDOTRIP_WORKFLOW || "daily_post.yml";
         const ref = env.ONDOTRIP_REF || "main";
@@ -713,7 +713,7 @@ export function createHandler(deps = {}) {
           ref,
           inputs: {
             count,
-            publish: "true",
+            publish: "false",
             preview_only: "false",
             status_only: "false",
             slack_channel_id: reportChannel,
@@ -722,7 +722,7 @@ export function createHandler(deps = {}) {
 
         if (reportChannel && env.SLACK_BOT_TOKEN) {
           const text = res.ok
-            ? `:alarm_clock: *OndoTrip 일일 자동 실행 시작* (Cloudflare Cron \`${cron}\`)\n• 대상: \`${repoFullName}\` (${count}건 자동 공개 발행)\n• <${res.actionsUrl}|GitHub Actions 진행 상황 보기>`
+            ? `:alarm_clock: *OndoTrip 일일 자동 실행 시작* (Cloudflare Cron \`${cron}\`)\n• 대상: \`${repoFullName}\` (${count}건 자동 임시저장)\n• <${res.actionsUrl}|GitHub Actions 진행 상황 보기>`
             : `:x: *OndoTrip 일일 자동 실행 트리거 실패*\n• 대상: \`${repoFullName}\`\n\`\`\`\n${res.error}\n\`\`\``;
           await callSlackApi(fetchFn, env.SLACK_BOT_TOKEN, "chat.postMessage", {
             channel: reportChannel,
